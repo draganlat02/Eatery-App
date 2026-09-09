@@ -1,0 +1,10 @@
+# Node / React
+node_modules/
+dist/
+.env
+
+# Java / Spring Boot
+target/
+.idea/
+*.class
+*.jar
