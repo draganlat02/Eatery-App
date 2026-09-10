@@ -1,44 +1,207 @@
+
 import React, { useState, useEffect } from 'react';
 import API from '../api';
+import './HeroVrecice.css';
 
 function HeroVrecice({ onDodajUVrecicu }) {
     const [vrecice, setVrecice] = useState([]);
 
     // Učitavanje aktivnih vrećica sa backenda
     useEffect(() => {
-        API.get('/vrecice/aktivne') // Prilagodi tvojoj backend ruti (npr. /vrecice ili /vrecice/aktivne)
+        API.get('/vrecice/aktivne')
             .then(res => setVrecice(res.data))
-            .catch(err => console.error("Greška pri učitavanju vrećica:", err));
+            .catch(err =>
+                console.error(
+                    "Greška pri učitavanju vrećica:",
+                    err
+                )
+            );
     }, []);
 
     return (
-        <div style={{ padding: '20px', backgroundColor: '#fff3cd', borderRadius: '10px', marginBottom: '30px' }}>
-            <h2 style={{ color: '#856404' }}>🎁 Vrećice Iznenađenja sa Popustom!</h2>
-            <p>Spasite hranu i kupite obrok po znatno nižoj cijeni.</p>
+        <section className="surprise-section">
 
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '15px' }}>
-                {vrecice.length === 0 ? (
-                    <p>Trenutno nema dostupnih vrećica iznenađenja.</p>
-                ) : (
-                    vrecice.map(v => (
-                        <div key={v.id} style={{ border: '1px solid #ffebaba', padding: '15px', borderRadius: '8px', backgroundColor: '#fff', width: '250px' }}>
-                            <h4>{v.naziv}</h4>
-                            <p style={{ fontSize: '14px', color: '#666' }}>{v.opis}</p>
-                            <p style={{ margin: '5px 0' }}>
-                                <span style={{ textDecoration: 'line-through', color: '#888', marginRight: '8px' }}>{v.staraCijena} KM</span>
-                                <strong style={{ color: '#d9534f', fontSize: '18px' }}>{v.akcijskaCijena} KM</strong>
-                            </p>
-                            <button 
-                                onClick={() => onDodajUVrecicu(v)}
-                                style={{ width: '100%', padding: '8px', backgroundColor: '#ff9800', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                🛒 Dodaj u Korpu
-                            </button>
-                        </div>
-                    ))
-                )}
+            {/* HEADER */}
+            <div className="surprise-header">
+
+                <div className="surprise-title-area">
+
+                    <div className="surprise-icon">
+                        🎁
+                    </div>
+
+                    <div>
+                        <span className="surprise-label">
+                            EATERY SPECIAL
+                        </span>
+
+                        <h2>
+                            Vrećice iznenađenja
+                        </h2>
+
+                        <p>
+                            Spasite odličnu hranu i uživajte u
+                            obroku po znatno nižoj cijeni.
+                        </p>
+                    </div>
+
+                </div>
+
+                <div className="surprise-badge">
+                    <span>♻</span>
+                    Smanjujemo bacanje hrane
+                </div>
+
             </div>
-        </div>
+
+
+            {/* VRECICE */}
+            {vrecice.length === 0 ? (
+
+                <div className="surprise-empty">
+
+                    <div className="surprise-empty-icon">
+                        🎁
+                    </div>
+
+                    <div>
+                        <h3>
+                            Trenutno nema dostupnih vrećica
+                        </h3>
+
+                        <p>
+                            Nove vrećice iznenađenja biće
+                            dostupne uskoro.
+                        </p>
+                    </div>
+
+                </div>
+
+            ) : (
+
+                <div className="surprise-grid">
+
+                    {vrecice.map(v => {
+
+                        const staraCijena =
+                            Number(v.staraCijena) || 0;
+
+                        const akcijskaCijena =
+                            Number(v.akcijskaCijena) || 0;
+
+                        const usteda =
+                            staraCijena > 0
+                                ? Math.round(
+                                      ((staraCijena -
+                                          akcijskaCijena) /
+                                          staraCijena) *
+                                          100
+                                  )
+                                : 0;
+
+                        return (
+                            <article
+                                className="surprise-card"
+                                key={v.id}
+                            >
+
+                                {/* IMAGE / ICON AREA */}
+                                <div className="surprise-card-top">
+
+                                    <div className="surprise-card-pattern">
+                                        <span>🎁</span>
+                                    </div>
+
+                                    {usteda > 0 && (
+                                        <div className="discount-badge">
+                                            -{usteda}%
+                                        </div>
+                                    )}
+
+                                </div>
+
+
+                                {/* CONTENT */}
+                                <div className="surprise-card-content">
+
+                                    <div className="surprise-card-heading">
+
+                                        <div>
+                                            <span className="surprise-small-label">
+                                                VREĆICA IZNENAĐENJA
+                                            </span>
+
+                                            <h3>
+                                                {v.naziv}
+                                            </h3>
+                                        </div>
+
+                                    </div>
+
+
+                                    <p className="surprise-description">
+                                        {v.opis ||
+                                            'Odabrana hrana iz restorana po posebnoj cijeni.'}
+                                    </p>
+
+
+                                    {/* PRICE */}
+                                    <div className="surprise-price-row">
+
+                                        <div className="surprise-prices">
+
+                                            <span className="old-price">
+                                                {staraCijena.toFixed(2)} KM
+                                            </span>
+
+                                            <strong className="new-price">
+                                                {akcijskaCijena.toFixed(2)} KM
+                                            </strong>
+
+                                        </div>
+
+                                        {usteda > 0 && (
+                                            <span className="saving-text">
+                                                Ušteda {(
+                                                    staraCijena -
+                                                    akcijskaCijena
+                                                ).toFixed(2)} KM
+                                            </span>
+                                        )}
+
+                                    </div>
+
+
+                                    {/* BUTTON */}
+                                    <button
+                                        className="surprise-add-button"
+                                        onClick={() =>
+                                            onDodajUVrecicu(v)
+                                        }
+                                    >
+                                        <span className="bag-icon">
+                                            🛒
+                                        </span>
+
+                                        Dodaj u korpu
+
+                                        <span className="button-arrow">
+                                            →
+                                        </span>
+                                    </button>
+
+                                </div>
+
+                            </article>
+                        );
+                    })}
+
+                </div>
+            )}
+
+        </section>
     );
 }
 
 export default HeroVrecice;
+
