@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import API from './api';
 import MojeNarudzbe from './MojeNarudzbe';
+import KupacProfil from './KupacProfil';
 import HeroVrecice from './components/HeroVrecice';
 import './KupacPanel.css';
 
 function KupacPanel({ user }) {
+
     const [restorani, setRestorani] = useState([]);
     const [izabraniRestoran, setIzabraniRestoran] = useState(null);
     const [jela, setJela] = useState([]);
@@ -13,74 +16,87 @@ function KupacPanel({ user }) {
     const [poruka, setPoruka] = useState('');
     const [osveziNarudzbe, setOsveziNarudzbe] = useState(0);
 
-    // Trenutni prikaz: restorani ili narudžbe
+    // RESTORANI / NARUDZBE / PROFIL
     const [aktivnaStranica, setAktivnaStranica] =
         useState('restorani');
 
-    // Pretraga restorana
-    const [pretraga, setPretraga] = useState('');
+
+    /* =========================================================
+       UČITAVANJE RESTORANA
+       ========================================================= */
 
     useEffect(() => {
+
         API.get('/kupac/restorani')
             .then(res => setRestorani(res.data))
-            .catch(err => console.error(err));
-    }, []);
-
-    const izaberiRestoran = async (restoran) => {
-        setIzabraniRestoran(restoran);
-        setAktivnaStranica('restorani');
-        setKorpa([]);
-
-        try {
-            const res = await API.get(
-                `/restoran/${restoran.id}/jela`
+            .catch(err =>
+                console.error(
+                    'Greška pri učitavanju restorana:',
+                    err
+                )
             );
 
+    }, []);
+
+
+    /* =========================================================
+       IZBOR RESTORANA
+       ========================================================= */
+
+    const izaberiRestoran = async (restoran) => {
+
+        setIzabraniRestoran(restoran);
+        setKorpa([]);
+        setAktivnaStranica('restorani');
+
+        try {
+
+            const res =
+                await API.get(
+                    `/restoran/${restoran.id}/jela`
+                );
+
             setJela(res.data);
+
         } catch (err) {
-            console.error(err);
+
+            console.error(
+                'Greška pri učitavanju jela:',
+                err
+            );
+
         }
     };
 
-    const idiNaRestorane = () => {
-        setAktivnaStranica('restorani');
-        setIzabraniRestoran(null);
-        setPretraga('');
 
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    };
-
-    const idiNaNarudzbe = () => {
-        setAktivnaStranica('narudzbe');
-        setIzabraniRestoran(null);
-
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    };
+    /* =========================================================
+       KORPA
+       ========================================================= */
 
     const dodajUKorpu = (jelo) => {
-        const postojeca = korpa.find(
-            item => item.jelo.id === jelo.id
-        );
+
+        const postojeca =
+            korpa.find(
+                item =>
+                    item.jelo.id === jelo.id
+            );
 
         if (postojeca) {
+
             setKorpa(
                 korpa.map(item =>
                     item.jelo.id === jelo.id
                         ? {
-                              ...item,
-                              kolicina:
-                                  item.kolicina + 1
-                          }
+                            ...item,
+                            kolicina:
+                                item.kolicina + 1
+                        }
                         : item
                 )
             );
+
         } else {
+
             setKorpa([
                 ...korpa,
                 {
@@ -88,48 +104,65 @@ function KupacPanel({ user }) {
                     kolicina: 1
                 }
             ]);
+
         }
     };
 
+
     const povecajKolicinu = (id) => {
+
         setKorpa(
             korpa.map(item =>
                 item.jelo.id === id
                     ? {
-                          ...item,
-                          kolicina:
-                              item.kolicina + 1
-                      }
+                        ...item,
+                        kolicina:
+                            item.kolicina + 1
+                    }
                     : item
             )
         );
     };
 
+
     const smanjiKolicinu = (id) => {
+
         setKorpa(
             korpa
                 .map(item =>
                     item.jelo.id === id
                         ? {
-                              ...item,
-                              kolicina:
-                                  item.kolicina - 1
-                          }
+                            ...item,
+                            kolicina:
+                                item.kolicina - 1
+                        }
                         : item
                 )
-                .filter(item => item.kolicina > 0)
+                .filter(
+                    item =>
+                        item.kolicina > 0
+                )
         );
     };
 
+
     const ukloniIzKorpe = (id) => {
+
         setKorpa(
             korpa.filter(
-                item => item.jelo.id !== id
+                item =>
+                    item.jelo.id !== id
             )
         );
     };
 
+
+    /* =========================================================
+       VRECICE
+       ========================================================= */
+
     const rukujDodavanjemVrecice = (vrecica) => {
+
         console.log(
             'Dodata vrećica u korpu:',
             vrecica
@@ -144,16 +177,25 @@ function KupacPanel({ user }) {
                     vrecica.restoran?.idKorisnika
             )
         ) {
+
             setIzabraniRestoran(
                 vrecica.restoran
             );
         }
 
         const vrecicaJelo = {
+
             id: `vrecica_${vrecica.id}`,
-            naziv: `🎁 ${vrecica.naziv}`,
-            cijena: vrecica.akcijskaCijena,
-            opis: vrecica.opis
+
+            naziv:
+                `🎁 ${vrecica.naziv}`,
+
+            cijena:
+                vrecica.akcijskaCijena,
+
+            opis:
+                vrecica.opis
+
         };
 
         dodajUKorpu(vrecicaJelo);
@@ -167,14 +209,20 @@ function KupacPanel({ user }) {
         }, 3000);
     };
 
+
+    /* =========================================================
+       CIJENA KORPE
+       ========================================================= */
+
     const ukupnaCijenaKorpe =
         korpa.reduce(
             (sum, item) =>
                 sum +
                 item.jelo.cijena *
-                    item.kolicina,
+                item.kolicina,
             0
         );
+
 
     const brojArtikala =
         korpa.reduce(
@@ -183,10 +231,19 @@ function KupacPanel({ user }) {
             0
         );
 
+
+    /* =========================================================
+       NARUDŽBA
+       ========================================================= */
+
     const posaljiNarudzbu = async (e) => {
-        if (e) e.preventDefault();
+
+        if (e) {
+            e.preventDefault();
+        }
 
         if (korpa.length === 0) {
+
             return alert(
                 'Vaša korpa je prazna!'
             );
@@ -201,91 +258,94 @@ function KupacPanel({ user }) {
             izabraniRestoran?.idKorisnika;
 
         if (!kId || !rId) {
+
             alert(
                 'Nedostaje ID kupca ili restorana!'
             );
+
             return;
         }
 
-        const stavkeDTO = korpa.map(item => {
-            const artikal =
-                item.jelo ||
-                item.vrecica ||
-                item;
+        const stavkeDTO =
+            korpa.map(item => {
 
-            let siroviId =
-                artikal.id ||
-                artikal.idJela ||
-                artikal.vrecicaId;
+                const artikal =
+                    item.jelo ||
+                    item.vrecica ||
+                    item;
 
-            const jeVrecica =
-                (
-                    typeof siroviId ===
-                        'string' &&
-                    siroviId.includes(
-                        'vrecica'
-                    )
-                ) ||
-                artikal.akcijskaCijena !==
-                    undefined;
+                let siroviId =
+                    artikal.id ||
+                    artikal.idJela ||
+                    artikal.vrecicaId;
 
-            if (
-                typeof siroviId ===
-                    'string' &&
-                siroviId.includes('_')
-            ) {
-                siroviId =
-                    siroviId.split('_')[1];
-            }
+                const jeVrecica =
+                    (
+                        typeof siroviId === 'string' &&
+                        siroviId.includes('vrecica')
+                    ) ||
+                    artikal.akcijskaCijena !==
+                        undefined;
 
-            const konvertovanId =
-                Number(siroviId);
+                if (
+                    typeof siroviId === 'string' &&
+                    siroviId.includes('_')
+                ) {
 
-            const cijena =
-                artikal.cijena ||
-                artikal.akcijskaCijena ||
-                0;
+                    siroviId =
+                        siroviId.split('_')[1];
+                }
 
-            return {
-                jeloId:
-                    !isNaN(
-                        konvertovanId
-                    )
-                        ? konvertovanId
-                        : null,
+                const konvertovanId =
+                    Number(siroviId);
 
-                tipStavke: jeVrecica
-                    ? 'VRECICA'
-                    : 'JELO',
+                const cijena =
+                    artikal.cijena ||
+                    artikal.akcijskaCijena ||
+                    0;
 
-                kolicina:
-                    Number(
-                        item.kolicina || 1
-                    ),
+                return {
 
-                cijena:
-                    Number(cijena)
-            };
-        });
+                    jeloId:
+                        !isNaN(konvertovanId)
+                            ? konvertovanId
+                            : null,
 
-        console.log(
-            'Stavke sa tipom spremljene za backend:',
-            stavkeDTO
-        );
+                    tipStavke:
+                        jeVrecica
+                            ? 'VRECICA'
+                            : 'JELO',
+
+                    kolicina:
+                        Number(
+                            item.kolicina || 1
+                        ),
+
+                    cijena:
+                        Number(cijena)
+
+                };
+            });
+
 
         const imaNevalidnih =
             stavkeDTO.some(
-                s => s.jeloId === null
+                s =>
+                    s.jeloId === null
             );
 
         if (imaNevalidnih) {
+
             alert(
                 'Greška: Jedan od artikala nema ispravan ID!'
             );
+
             return;
         }
 
+
         const dto = {
+
             kupacId:
                 Number(kId),
 
@@ -305,7 +365,9 @@ function KupacPanel({ user }) {
                 stavkeDTO
         };
 
+
         try {
+
             await API.post(
                 '/narudzbe',
                 dto
@@ -321,17 +383,18 @@ function KupacPanel({ user }) {
             setOsveziNarudzbe(
                 prev => prev + 1
             );
+
         } catch (err) {
+
             console.error(
                 'Greška sa backenda:',
                 err.response?.data ||
-                    err.message
+                err.message
             );
 
             alert(
                 `Greška prilikom slanja: ${
-                    err.response?.data
-                        ?.message ||
+                    err.response?.data?.message ||
                     err.response?.data ||
                     err.message
                 }`
@@ -339,70 +402,124 @@ function KupacPanel({ user }) {
         }
     };
 
+
+    /* =========================================================
+       NAZIV RESTORANA
+       ========================================================= */
+
     const nazivRestorana =
         izabraniRestoran?.nazivObjekta ||
         izabraniRestoran?.korisnickoIme;
 
-    // ==========================================
-    // FILTRIRANI RESTORANI
-    // ==========================================
 
-    const filtriraniRestorani =
-        restorani.filter(restoran => {
-            const naziv =
-                restoran.nazivObjekta ||
-                restoran.korisnickoIme ||
-                '';
+    /* =========================================================
+       NAVIGACIJA
+       ========================================================= */
 
-            const opis =
-                restoran.opis || '';
+    const idiNaRestorane = () => {
 
-            const tekstPretrage =
-                pretraga
-                    .toLowerCase()
-                    .trim();
+        setAktivnaStranica('restorani');
+        setIzabraniRestoran(null);
 
-            if (!tekstPretrage) {
-                return true;
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+
+
+    const idiNaNarudzbe = () => {
+
+        setAktivnaStranica(
+            'narudzbe'
+        );
+
+        setIzabraniRestoran(null);
+
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+
+
+    const idiNaProfil = () => {
+
+        setAktivnaStranica(
+            'profil'
+        );
+
+        setIzabraniRestoran(null);
+
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+
+
+    const idiNaKorpu = () => {
+
+        if (!izabraniRestoran) {
+
+            if (korpa.length > 0) {
+
+                setPoruka(
+                    'Otvorite restoran da biste pregledali korpu.'
+                );
+
+                setTimeout(() => {
+                    setPoruka('');
+                }, 3000);
+
             }
 
-            return (
-                naziv
-                    .toLowerCase()
-                    .includes(
-                        tekstPretrage
-                    ) ||
-                opis
-                    .toLowerCase()
-                    .includes(
-                        tekstPretrage
-                    )
-            );
-        });
+            return;
+        }
+
+        setAktivnaStranica(
+            'restorani'
+        );
+
+        setTimeout(() => {
+
+            document
+                .getElementById('korpa')
+                ?.scrollIntoView({
+                    behavior: 'smooth'
+                });
+
+        }, 50);
+    };
+
 
     return (
         <div className="kupac-page">
 
-            {/* =========================================
-                NAVBAR
-            ========================================= */}
+            {/* =================================================
+               NAVBAR
+               ================================================= */}
 
             <header className="kupac-navbar">
+
                 <div className="kupac-navbar-inner">
 
                     {/* BRAND */}
 
                     <div
                         className="brand"
-                        onClick={
-                            idiNaRestorane
-                        }
+                        onClick={idiNaRestorane}
+                        style={{
+                            cursor: 'pointer'
+                        }}
                     >
+
                         <div className="brand-logo">
                             E
                         </div>
 
                         <div>
+
                             <div className="brand-name">
                                 Eatery
                             </div>
@@ -410,8 +527,11 @@ function KupacPanel({ user }) {
                             <div className="brand-subtitle">
                                 Food delivery
                             </div>
+
                         </div>
+
                     </div>
+
 
                     {/* NAVIGATION */}
 
@@ -432,73 +552,48 @@ function KupacPanel({ user }) {
                             Restorani
                         </button>
 
-                        {izabraniRestoran &&
-                            aktivnaStranica ===
-                                'restorani' && (
-                                <button
-                                    className="nav-link"
-                                    onClick={() =>
-                                        document
-                                            .getElementById(
-                                                'meni'
-                                            )
-                                            ?.scrollIntoView(
-                                                {
-                                                    behavior:
-                                                        'smooth'
-                                                }
-                                            )
-                                    }
-                                >
-                                    <span>
-                                        ☷
-                                    </span>
-                                    Meni
-                                </button>
-                            )}
 
                         <button
+                            onClick={
+                                idiNaNarudzbe
+                            }
                             className={
                                 aktivnaStranica ===
                                     'narudzbe'
                                     ? 'nav-link active'
                                     : 'nav-link'
                             }
-                            onClick={
-                                idiNaNarudzbe
-                            }
                         >
                             <span>◷</span>
                             Moje narudžbe
                         </button>
 
+
+                        <button
+                            onClick={
+                                idiNaProfil
+                            }
+                            className={
+                                aktivnaStranica ===
+                                    'profil'
+                                    ? 'nav-link active'
+                                    : 'nav-link'
+                            }
+                        >
+                            <span>👤</span>
+                            Moj profil
+                        </button>
+
                     </nav>
+
 
                     {/* CART */}
 
                     <button
                         className="navbar-cart"
-                        onClick={() => {
-                            if (
-                                izabraniRestoran
-                            ) {
-                                document
-                                    .getElementById(
-                                        'korpa'
-                                    )
-                                    ?.scrollIntoView(
-                                        {
-                                            behavior:
-                                                'smooth'
-                                        }
-                                    );
-                            } else {
-                                alert(
-                                    'Prvo izaberite restoran.'
-                                );
-                            }
-                        }}
+                        onClick={idiNaKorpu}
                     >
+
                         <span className="cart-icon">
                             🛒
                         </span>
@@ -507,67 +602,74 @@ function KupacPanel({ user }) {
                             Korpa
                         </span>
 
-                        {brojArtikala >
-                            0 && (
+                        {brojArtikala > 0 && (
                             <span className="cart-badge">
-                                {
-                                    brojArtikala
-                                }
+                                {brojArtikala}
                             </span>
                         )}
+
                     </button>
 
                 </div>
+
             </header>
 
-            {/* =========================================
-                MAIN
-            ========================================= */}
+
+            {/* =================================================
+               MAIN
+               ================================================= */}
 
             <main className="kupac-content">
 
-                {/* =========================================
-                    NARUDŽBE — ZASEBAN PRIKAZ
-                ========================================= */}
 
-                {aktivnaStranica ===
-                    'narudzbe' ? (
+                {/* =================================================
+                   PROFIL
+                   ================================================= */}
 
-                    <section className="orders-page">
+                {aktivnaStranica === 'profil' && (
 
-                        <div className="orders-page-top">
+                    <KupacProfil
+                       kupacId={user?.id || user?.idKorisnika}
+                    />
 
-                            <button
-                                className="back-button"
-                                onClick={
-                                    idiNaRestorane
-                                }
-                            >
-                                <span>
-                                    ←
-                                </span>
-                                Nazad na restorane
-                            </button>
+                )}
 
-                        </div>
+
+                {/* =================================================
+                   NARUDŽBE
+                   ================================================= */}
+
+                {aktivnaStranica === 'narudzbe' && (
+
+                    <section
+                        className="orders-section orders-page"
+                        id="narudzbe"
+                    >
 
                         <div className="orders-heading">
-                            <span className="section-label">
-                                MOJA AKTIVNOST
-                            </span>
 
-                            <h1>
-                                Moje narudžbe
-                            </h1>
+                            <div>
 
-                            <p>
-                                Pregledajte svoje
-                                prethodne i trenutne
-                                narudžbe.
-                            </p>
+                                <span className="section-label">
+                                    MOJA AKTIVNOST
+                                </span>
+
+                                <h2>
+                                    Moje narudžbe
+                                </h2>
+
+                                <p>
+                                    Pregledajte svoje prethodne
+                                    i trenutne narudžbe.
+                                </p>
+
+                            </div>
+
                         </div>
 
+
                         <div className="orders-container">
+
                             <MojeNarudzbe
                                 kupacId={
                                     user?.id ||
@@ -577,23 +679,26 @@ function KupacPanel({ user }) {
                                     osveziNarudzbe
                                 }
                             />
+
                         </div>
 
                     </section>
 
-                ) : (
+                )}
 
-                    /* =====================================
-                       POČETNA / RESTORANI
-                    ===================================== */
+
+                {/* =================================================
+                   RESTORANI
+                   ================================================= */}
+
+                {aktivnaStranica === 'restorani' && (
 
                     <>
 
-                        {/* =================================
-                            WELCOME
-                        ================================= */}
+                        {/* ================= WELCOME ================= */}
 
                         {!izabraniRestoran && (
+
                             <section className="welcome-section">
 
                                 <div className="welcome-text">
@@ -603,43 +708,48 @@ function KupacPanel({ user }) {
                                     </span>
 
                                     <h1>
+
                                         Zdravo,{' '}
+
                                         <span>
-                                            {
-                                                user?.ime ||
+                                            {user?.ime ||
                                                 user?.korisnickoIme ||
-                                                'goste'
-                                            }
+                                                'goste'}
                                         </span>
+
                                         !
+
                                     </h1>
 
                                     <p>
-                                        Pronađite omiljeni
-                                        restoran, izaberite
-                                        jelo i uživajte u
-                                        jednostavnoj kupovini.
+                                        Pronađite omiljeni restoran,
+                                        izaberite jelo i uživajte u
+                                        brzoj dostavi.
                                     </p>
 
                                 </div>
 
+
                                 <div className="welcome-stats">
 
                                     <div className="mini-stat">
+
                                         <strong>
-                                            {
-                                                restorani.length
-                                            }
+                                            {restorani.length}
                                         </strong>
 
                                         <span>
                                             restorana
                                         </span>
+
                                     </div>
+
 
                                     <div className="mini-stat-divider" />
 
+
                                     <div className="mini-stat">
+
                                         <strong>
                                             24/7
                                         </strong>
@@ -647,18 +757,20 @@ function KupacPanel({ user }) {
                                         <span>
                                             jednostavna kupovina
                                         </span>
+
                                     </div>
 
                                 </div>
 
                             </section>
+
                         )}
 
-                        {/* =================================
-                            VRECICE
-                        ================================= */}
+
+                        {/* ================= VRECICE ================= */}
 
                         {!izabraniRestoran && (
+
                             <section className="hero-vrecice-wrapper">
 
                                 <HeroVrecice
@@ -668,13 +780,14 @@ function KupacPanel({ user }) {
                                 />
 
                             </section>
+
                         )}
 
-                        {/* =================================
-                            PORUKA
-                        ================================= */}
+
+                        {/* ================= PORUKA ================= */}
 
                         {poruka && (
+
                             <div className="success-message">
 
                                 <span className="success-icon">
@@ -694,19 +807,22 @@ function KupacPanel({ user }) {
                                 </button>
 
                             </div>
+
                         )}
 
-                        {/* =================================
-                            RESTORANI
-                        ================================= */}
+
+                        {/* =================================================
+                           LISTA RESTORANA
+                           ================================================= */}
 
                         {!izabraniRestoran ? (
 
                             <section className="restaurants-section">
 
-                                <div className="section-heading restaurants-heading">
+                                <div className="section-heading">
 
                                     <div>
+
                                         <span className="section-label">
                                             ISTRAŽITE PONUDU
                                         </span>
@@ -716,56 +832,16 @@ function KupacPanel({ user }) {
                                         </h2>
 
                                         <p>
-                                            Odaberite restoran
-                                            i pogledajte njihov
-                                            meni.
+                                            Odaberite restoran i
+                                            pogledajte njihov meni.
                                         </p>
-                                    </div>
-
-                                    {/* PRETRAGA */}
-
-                                    <div className="restaurant-search">
-
-                                        <span className="search-icon">
-                                            🔎
-                                        </span>
-
-                                        <input
-                                            type="text"
-                                            value={
-                                                pretraga
-                                            }
-                                            onChange={e =>
-                                                setPretraga(
-                                                    e.target
-                                                        .value
-                                                )
-                                            }
-                                            placeholder="Pretraži restorane..."
-                                        />
-
-                                        {pretraga && (
-                                            <button
-                                                className="clear-search"
-                                                onClick={() =>
-                                                    setPretraga(
-                                                        ''
-                                                    )
-                                                }
-                                                aria-label="Obriši pretragu"
-                                            >
-                                                ×
-                                            </button>
-                                        )}
 
                                     </div>
 
                                 </div>
 
-                                {/* REZULTATI PRETRAGE */}
 
-                                {restorani.length ===
-                                0 ? (
+                                {restorani.length === 0 ? (
 
                                     <div className="empty-state">
 
@@ -778,166 +854,116 @@ function KupacPanel({ user }) {
                                         </h3>
 
                                         <p>
-                                            Pokušajte ponovo
-                                            kasnije.
+                                            Pokušajte ponovo kasnije.
                                         </p>
-
-                                    </div>
-
-                                ) : filtriraniRestorani.length ===
-                                  0 ? (
-
-                                    <div className="empty-state search-empty-state">
-
-                                        <div className="empty-icon">
-                                            🔎
-                                        </div>
-
-                                        <h3>
-                                            Nema rezultata
-                                        </h3>
-
-                                        <p>
-                                            Nijedan restoran
-                                            ne odgovara
-                                            pretrazi "
-                                            {pretraga}
-                                            ".
-                                        </p>
-
-                                        <button
-                                            className="reset-search-button"
-                                            onClick={() =>
-                                                setPretraga(
-                                                    ''
-                                                )
-                                            }
-                                        >
-                                            Prikaži sve restorane
-                                        </button>
 
                                     </div>
 
                                 ) : (
 
-                                    <>
+                                    <div className="restaurant-grid">
 
-                                        {pretraga && (
-                                            <div className="search-result-info">
-                                                Pronađeno{' '}
-                                                <strong>
-                                                    {
-                                                        filtriraniRestorani.length
-                                                    }
-                                                </strong>{' '}
-                                                {filtriraniRestorani.length ===
-                                                1
-                                                    ? 'restoran'
-                                                    : 'restorana'}
-                                            </div>
-                                        )}
+                                        {restorani.map(r => (
 
-                                        <div className="restaurant-grid">
+                                            <article
+                                                className="restaurant-card"
+                                                key={
+                                                    r.id ||
+                                                    r.idKorisnika
+                                                }
+                                                onClick={() =>
+                                                    izaberiRestoran(r)
+                                                }
+                                            >
 
-                                            {filtriraniRestorani.map(
-                                                r => (
-                                                    <article
-                                                        className="restaurant-card"
-                                                        key={
-                                                            r.id ||
-                                                            r.idKorisnika
-                                                        }
-                                                        onClick={() =>
-                                                            izaberiRestoran(
-                                                                r
-                                                            )
-                                                        }
+                                                <div className="restaurant-cover">
+
+                                                    <div className="restaurant-placeholder">
+                                                        🍴
+                                                    </div>
+
+                                                    <div className="restaurant-status">
+
+                                                        <span />
+
+                                                        Otvoreno
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <div className="restaurant-info">
+
+                                                    <div className="restaurant-title-row">
+
+                                                        <h3>
+                                                            {r.nazivObjekta ||
+                                                                r.korisnickoIme}
+                                                        </h3>
+
+                                                        <span className="restaurant-arrow">
+                                                            →
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <p>
+                                                        {r.opis ||
+                                                            'Ukusna hrana i kvalitetna usluga.'}
+                                                    </p>
+
+
+                                                    <div className="restaurant-meta">
+
+                                                        <span>
+                                                            •
+                                                        </span>
+
+                                                        <span>
+                                                            Pregledajte meni
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <button
+                                                        className="restaurant-button"
+                                                        onClick={e => {
+
+                                                            e.stopPropagation();
+
+                                                            izaberiRestoran(r);
+
+                                                        }}
                                                     >
 
-                                                        <div className="restaurant-cover">
+                                                        Pogledaj meni
 
-                                                            <div className="restaurant-placeholder">
-                                                                🍴
-                                                            </div>
+                                                        <span>
+                                                            →
+                                                        </span>
 
-                                                            <div className="restaurant-status">
-                                                                <span />
-                                                                Otvoreno
-                                                            </div>
+                                                    </button>
 
-                                                        </div>
+                                                </div>
 
-                                                        <div className="restaurant-info">
+                                            </article>
 
-                                                            <div className="restaurant-title-row">
+                                        ))}
 
-                                                                <h3>
-                                                                    {
-                                                                        r.nazivObjekta ||
-                                                                        r.korisnickoIme
-                                                                    }
-                                                                </h3>
+                                    </div>
 
-                                                                <span className="restaurant-arrow">
-                                                                    →
-                                                                </span>
-
-                                                            </div>
-
-                                                            <p>
-                                                                {r.opis ||
-                                                                    'Ukusna hrana i kvalitetna usluga.'}
-                                                            </p>
-
-                                                            <div className="restaurant-meta">
-
-                                                                <span>
-                                                                    🍽️
-                                                                </span>
-
-                                                                <span>
-                                                                    •
-                                                                </span>
-
-                                                                <span>
-                                                                    Pregledajte meni
-                                                                </span>
-
-                                                            </div>
-
-                                                            <button
-                                                                className="restaurant-button"
-                                                                onClick={e => {
-                                                                    e.stopPropagation();
-                                                                    izaberiRestoran(
-                                                                        r
-                                                                    );
-                                                                }}
-                                                            >
-                                                                Pogledaj meni
-                                                                <span>
-                                                                    →
-                                                                </span>
-                                                            </button>
-
-                                                        </div>
-
-                                                    </article>
-                                                )
-                                            )}
-
-                                        </div>
-
-                                    </>
                                 )}
 
                             </section>
 
                         ) : (
 
-                            /* =================================
+                            /* =================================================
                                RESTORAN + MENI
-                            ================================= */
+                               ================================================= */
 
                             <section
                                 className="menu-layout-section"
@@ -946,17 +972,25 @@ function KupacPanel({ user }) {
 
                                 <button
                                     className="back-button"
-                                    onClick={() =>
+                                    onClick={() => {
+
                                         setIzabraniRestoran(
                                             null
-                                        )
-                                    }
+                                        );
+
+                                        setKorpa([]);
+
+                                    }}
                                 >
+
                                     <span>
                                         ←
                                     </span>
+
                                     Svi restorani
+
                                 </button>
+
 
                                 <div className="restaurant-header">
 
@@ -964,24 +998,24 @@ function KupacPanel({ user }) {
                                         🍽️
                                     </div>
 
+
                                     <div>
+
                                         <span className="section-label">
                                             MENI RESTORANA
                                         </span>
 
                                         <h2>
-                                            {
-                                                nazivRestorana
-                                            }
+                                            {nazivRestorana}
                                         </h2>
 
                                         <p>
-                                            Izaberite jela
-                                            koja želite
-                                            dodati u svoju
-                                            korpu.
+                                            Izaberite jela koja želite
+                                            dodati u svoju korpu.
                                         </p>
+
                                     </div>
+
 
                                     <div className="header-cart-info">
 
@@ -990,45 +1024,40 @@ function KupacPanel({ user }) {
                                         </span>
 
                                         <strong>
-                                            {
-                                                brojArtikala
-                                            }{' '}
-                                            {brojArtikala ===
-                                            1
-                                                ? 'artikal'
-                                                : 'artikala'}
+                                            {brojArtikala} artikala
                                         </strong>
 
                                     </div>
 
                                 </div>
 
+
                                 <div className="menu-content">
 
-                                    {/* JELA */}
+
+                                    {/* ================= JELA ================= */}
 
                                     <div className="food-list">
 
                                         <div className="food-list-heading">
 
                                             <div>
+
                                                 <h3>
                                                     Ponuda jela
                                                 </h3>
 
                                                 <p>
-                                                    {
-                                                        jela.length
-                                                    }{' '}
-                                                    dostupnih
-                                                    stavki
+                                                    {jela.length}{' '}
+                                                    dostupnih stavki
                                                 </p>
+
                                             </div>
 
                                         </div>
 
-                                        {jela.length ===
-                                        0 ? (
+
+                                        {jela.length === 0 ? (
 
                                             <div className="empty-state">
 
@@ -1037,14 +1066,12 @@ function KupacPanel({ user }) {
                                                 </div>
 
                                                 <h3>
-                                                    Meni je trenutno
-                                                    prazan
+                                                    Meni je trenutno prazan
                                                 </h3>
 
                                                 <p>
-                                                    Ovaj restoran
-                                                    trenutno nema
-                                                    dostupnih jela.
+                                                    Ovaj restoran trenutno
+                                                    nema dostupnih jela.
                                                 </p>
 
                                             </div>
@@ -1053,70 +1080,72 @@ function KupacPanel({ user }) {
 
                                             <div className="food-items">
 
-                                                {jela.map(
-                                                    j => (
-                                                        <article
-                                                            className="food-card"
-                                                            key={
-                                                                j.id ||
-                                                                j.idJela
+                                                {jela.map(j => (
+
+                                                    <article
+                                                        className="food-card"
+                                                        key={
+                                                            j.id ||
+                                                            j.idJela
+                                                        }
+                                                    >
+
+                                                        <div className="food-image">
+                                                            🍽
+                                                        </div>
+
+
+                                                        <div className="food-details">
+
+                                                            <h4>
+                                                                {j.naziv}
+                                                            </h4>
+
+                                                            <p>
+                                                                {j.opis ||
+                                                                    'Ukusno pripremljeno jelo.'}
+                                                            </p>
+
+                                                            <strong className="food-price">
+
+                                                                {Number(
+                                                                    j.cijena
+                                                                ).toFixed(2)}
+
+                                                                {' '}KM
+
+                                                            </strong>
+
+                                                        </div>
+
+
+                                                        <button
+                                                            className="add-food-button"
+                                                            onClick={() =>
+                                                                dodajUKorpu(j)
                                                             }
                                                         >
 
-                                                            <div className="food-image">
-                                                                🍽
-                                                            </div>
+                                                            <span>
+                                                                +
+                                                            </span>
 
-                                                            <div className="food-details">
+                                                            Dodaj
 
-                                                                <h4>
-                                                                    {
-                                                                        j.naziv
-                                                                    }
-                                                                </h4>
+                                                        </button>
 
-                                                                <p>
-                                                                    {j.opis ||
-                                                                        'Ukusno pripremljeno jelo.'}
-                                                                </p>
+                                                    </article>
 
-                                                                <strong className="food-price">
-                                                                    {Number(
-                                                                        j.cijena
-                                                                    ).toFixed(
-                                                                        2
-                                                                    )}{' '}
-                                                                    KM
-                                                                </strong>
-
-                                                            </div>
-
-                                                            <button
-                                                                className="add-food-button"
-                                                                onClick={() =>
-                                                                    dodajUKorpu(
-                                                                        j
-                                                                    )
-                                                                }
-                                                            >
-                                                                <span>
-                                                                    +
-                                                                </span>
-                                                                Dodaj
-                                                            </button>
-
-                                                        </article>
-                                                    )
-                                                )}
+                                                ))}
 
                                             </div>
+
                                         )}
 
                                     </div>
 
-                                    {/* =================================
-                                        KORPA
-                                    ================================= */}
+
+                                    {/* ================= KORPA ================= */}
 
                                     <aside
                                         className="cart-card"
@@ -1138,39 +1167,43 @@ function KupacPanel({ user }) {
                                                     </h3>
 
                                                     <p>
-                                                        {brojArtikala ===
-                                                        0
+
+                                                        {brojArtikala === 0
+
                                                             ? 'Nema artikala'
+
                                                             : `${brojArtikala} ${
-                                                                  brojArtikala ===
-                                                                  1
-                                                                      ? 'artikal'
-                                                                      : 'artikala'
-                                                              }`}
+                                                                brojArtikala === 1
+                                                                    ? 'artikal'
+                                                                    : 'artikala'
+                                                            }`
+
+                                                        }
+
                                                     </p>
 
                                                 </div>
 
                                             </div>
 
-                                            {korpa.length >
-                                                0 && (
+
+                                            {korpa.length > 0 && (
+
                                                 <button
                                                     className="clear-cart"
                                                     onClick={() =>
-                                                        setKorpa(
-                                                            []
-                                                        )
+                                                        setKorpa([])
                                                     }
                                                 >
                                                     Očisti
                                                 </button>
+
                                             )}
 
                                         </div>
 
-                                        {korpa.length ===
-                                        0 ? (
+
+                                        {korpa.length === 0 ? (
 
                                             <div className="empty-cart">
 
@@ -1183,11 +1216,9 @@ function KupacPanel({ user }) {
                                                 </h4>
 
                                                 <p>
-                                                    Dodajte nešto
-                                                    iz menija i
-                                                    ovdje ćete
-                                                    vidjeti svoju
-                                                    narudžbu.
+                                                    Dodajte nešto iz menija
+                                                    i ovdje ćete vidjeti
+                                                    svoju narudžbu.
                                                 </p>
 
                                             </div>
@@ -1198,120 +1229,130 @@ function KupacPanel({ user }) {
 
                                                 <div className="cart-items">
 
-                                                    {korpa.map(
-                                                        item => (
-                                                            <div
-                                                                className="cart-item"
-                                                                key={
-                                                                    item
-                                                                        .jelo
-                                                                        .id
-                                                                }
-                                                            >
+                                                    {korpa.map(item => (
 
-                                                                <div className="cart-item-main">
+                                                        <div
+                                                            className="cart-item"
+                                                            key={
+                                                                item.jelo.id
+                                                            }
+                                                        >
 
-                                                                    <div className="cart-item-icon">
-                                                                        {item.jelo.naziv.startsWith(
-                                                                            '🎁'
-                                                                        )
-                                                                            ? '🎁'
-                                                                            : '🍴'}
-                                                                    </div>
+                                                            <div className="cart-item-main">
 
-                                                                    <div className="cart-item-info">
+                                                                <div className="cart-item-icon">
 
-                                                                        <h4>
-                                                                            {
-                                                                                item
-                                                                                    .jelo
-                                                                                    .naziv
-                                                                            }
-                                                                        </h4>
-
-                                                                        <span>
-                                                                            {Number(
-                                                                                item
-                                                                                    .jelo
-                                                                                    .cijena
-                                                                            ).toFixed(
-                                                                                2
-                                                                            )}{' '}
-                                                                            KM
-                                                                        </span>
-
-                                                                    </div>
+                                                                    {item.jelo.naziv.startsWith(
+                                                                        '🎁'
+                                                                    )
+                                                                        ? '🎁'
+                                                                        : '🍴'}
 
                                                                 </div>
 
-                                                                <div className="cart-item-bottom">
 
-                                                                    <div className="quantity-control">
+                                                                <div className="cart-item-info">
 
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                smanjiKolicinu(
-                                                                                    item
-                                                                                        .jelo
-                                                                                        .id
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            −
-                                                                        </button>
-
-                                                                        <strong>
-                                                                            {
-                                                                                item.kolicina
-                                                                            }
-                                                                        </strong>
-
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                povecajKolicinu(
-                                                                                    item
-                                                                                        .jelo
-                                                                                        .id
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            +
-                                                                        </button>
-
-                                                                    </div>
-
-                                                                    <strong>
-                                                                        {(
+                                                                    <h4>
+                                                                        {
                                                                             item
                                                                                 .jelo
-                                                                                .cijena *
-                                                                            item.kolicina
-                                                                        ).toFixed(
-                                                                            2
-                                                                        )}{' '}
-                                                                        KM
-                                                                    </strong>
+                                                                                .naziv
+                                                                        }
+                                                                    </h4>
+
+                                                                    <span>
+
+                                                                        {Number(
+                                                                            item
+                                                                                .jelo
+                                                                                .cijena
+                                                                        ).toFixed(2)}
+
+                                                                        {' '}KM
+
+                                                                    </span>
 
                                                                 </div>
-
-                                                                <button
-                                                                    className="remove-item"
-                                                                    onClick={() =>
-                                                                        ukloniIzKorpe(
-                                                                            item
-                                                                                .jelo
-                                                                                .id
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Ukloni
-                                                                </button>
 
                                                             </div>
-                                                        )
-                                                    )}
+
+
+                                                            <div className="cart-item-bottom">
+
+                                                                <div className="quantity-control">
+
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            smanjiKolicinu(
+                                                                                item
+                                                                                    .jelo
+                                                                                    .id
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        −
+                                                                    </button>
+
+
+                                                                    <strong>
+                                                                        {
+                                                                            item.kolicina
+                                                                        }
+                                                                    </strong>
+
+
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            povecajKolicinu(
+                                                                                item
+                                                                                    .jelo
+                                                                                    .id
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        +
+                                                                    </button>
+
+                                                                </div>
+
+
+                                                                <strong>
+
+                                                                    {(
+                                                                        item.jelo
+                                                                            .cijena *
+                                                                        item.kolicina
+                                                                    ).toFixed(2)}
+
+                                                                    {' '}KM
+
+                                                                </strong>
+
+                                                            </div>
+
+
+                                                            <button
+                                                                className="remove-item"
+                                                                onClick={() =>
+                                                                    ukloniIzKorpe(
+                                                                        item
+                                                                            .jelo
+                                                                            .id
+                                                                    )
+                                                                }
+                                                            >
+                                                                Ukloni
+                                                            </button>
+
+                                                        </div>
+
+                                                    ))}
 
                                                 </div>
+
+
+                                                {/* SUMMARY */}
 
                                                 <div className="cart-summary">
 
@@ -1322,13 +1363,17 @@ function KupacPanel({ user }) {
                                                         </span>
 
                                                         <strong>
+
                                                             {ukupnaCijenaKorpe.toFixed(
                                                                 2
-                                                            )}{' '}
-                                                            KM
+                                                            )}
+
+                                                            {' '}KM
+
                                                         </strong>
 
                                                     </div>
+
 
                                                     <div className="summary-line">
 
@@ -1342,6 +1387,7 @@ function KupacPanel({ user }) {
 
                                                     </div>
 
+
                                                     <div className="summary-total">
 
                                                         <span>
@@ -1349,15 +1395,21 @@ function KupacPanel({ user }) {
                                                         </span>
 
                                                         <strong>
+
                                                             {ukupnaCijenaKorpe.toFixed(
                                                                 2
-                                                            )}{' '}
-                                                            KM
+                                                            )}
+
+                                                            {' '}KM
+
                                                         </strong>
 
                                                     </div>
 
                                                 </div>
+
+
+                                                {/* ORDER FORM */}
 
                                                 <form
                                                     className="order-form"
@@ -1370,31 +1422,36 @@ function KupacPanel({ user }) {
                                                         Adresa dostave
                                                     </label>
 
+
                                                     <input
                                                         type="text"
                                                         placeholder="Unesite adresu dostave..."
                                                         value={
                                                             adresa
                                                         }
-                                                        onChange={e =>
-                                                            setAdresa(
-                                                                e
-                                                                    .target
-                                                                    .value
-                                                            )
+                                                        onChange={
+                                                            e =>
+                                                                setAdresa(
+                                                                    e.target.value
+                                                                )
                                                         }
                                                         required
                                                     />
+
 
                                                     <button
                                                         type="submit"
                                                         className="order-button"
                                                     >
+
                                                         Potvrdi i naruči
+
                                                         <span>
                                                             →
                                                         </span>
+
                                                     </button>
+
 
                                                     <small>
                                                         🔒 Sigurna narudžba
@@ -1403,6 +1460,7 @@ function KupacPanel({ user }) {
                                                 </form>
 
                                             </>
+
                                         )}
 
                                     </aside>
@@ -1410,16 +1468,19 @@ function KupacPanel({ user }) {
                                 </div>
 
                             </section>
+
                         )}
 
                     </>
+
                 )}
 
             </main>
 
-            {/* =========================================
-                FOOTER
-            ========================================= */}
+
+            {/* =================================================
+               FOOTER
+               ================================================= */}
 
             <footer className="kupac-footer">
 

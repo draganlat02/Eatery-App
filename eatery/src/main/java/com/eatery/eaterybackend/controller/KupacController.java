@@ -1,6 +1,5 @@
 package com.eatery.eaterybackend.controller;
 
-
 import com.eatery.eaterybackend.dto.*;
 import com.eatery.eaterybackend.entity.*;
 import com.eatery.eaterybackend.repository.*;
@@ -17,20 +16,57 @@ import java.util.List;
 public class KupacController {
 
     private final KorisnikRepository korisnikRepository;
+    private final KupacRepository kupacRepository; // Dodato
     private final JeloRepository jeloRepository;
     private final NarudzbaRepository narudzbaRepository;
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
 
     public KupacController(KorisnikRepository korisnikRepository,
+                           KupacRepository kupacRepository,
                            JeloRepository jeloRepository,
                            NarudzbaRepository narudzbaRepository,
                            StavkaNarudzbeRepository stavkaNarudzbeRepository) {
         this.korisnikRepository = korisnikRepository;
+        this.kupacRepository = kupacRepository;
         this.jeloRepository = jeloRepository;
         this.narudzbaRepository = narudzbaRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
     }
 
+    // Preuzimanje podataka za profil kupca (Osnovni podaci + Kupljene vrećice + Ušteda)
+    @GetMapping("/profil/{kupacId}")
+    public ResponseEntity<?> getProfilKupca(@PathVariable Long kupacId) {
+        // 1. Pronađi korisnika
+        KorisnikEntity korisnik = korisnikRepository.findById(kupacId)
+                .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen sa ID: " + kupacId));
+
+        // 2. Blokiraj ako korisnik nije uloga "KUPAC" (npr. ako je "KLIJENT" ili "ADMIN")
+        if (korisnik.getUloga() == null || !"KUPAC".equalsIgnoreCase(korisnik.getUloga())) {
+            return ResponseEntity.status(400).body("Korisnik sa ID " + kupacId + " nije kupac.");
+        }
+
+        // 3. Pronađi specifične podatke kupca iz tabele 'kupac'
+        KupacEntity kupac = kupacRepository.findById(kupacId).orElse(null);
+
+        Long ukupnoVrecica = narudzbaRepository.prebrojVrecicePoKupcu(kupacId);
+        BigDecimal ukupnaUsteda = narudzbaRepository.izracunajUsteduPoKupcu(kupacId);
+
+        KupacProfilDTO dto = new KupacProfilDTO();
+        dto.setIdKorisnika(korisnik.getId());
+        dto.setEmail(korisnik.getEmail());
+        dto.setKorisnickoIme(korisnik.getKorisnickoIme());
+
+        if (kupac != null) {
+            dto.setIme(kupac.getIme());
+            dto.setCestiKupac(kupac.getCestiKupac());
+            dto.setPopust(kupac.getPopust());
+        }
+
+        dto.setUkupnoVrecica(ukupnoVrecica != null ? ukupnoVrecica : 0L);
+        dto.setUkupnaUstedaKM(ukupnaUsteda != null ? ukupnaUsteda : BigDecimal.ZERO);
+
+        return ResponseEntity.ok(dto);
+    }
     // Preuzimanje svih aktiviranih restorana
     @GetMapping("/restorani")
     public ResponseEntity<List<KorisnikEntity>> getAktivniRestorani() {
@@ -64,7 +100,6 @@ public class KupacController {
                     .orElseThrow(() -> new RuntimeException("Jelo nije pronađeno sa ID: " + sDTO.getJeloId()));
 
             StavkaNarudzbeEntity stavka = new StavkaNarudzbeEntity();
-            // Prilagođeno vašem entitetu koji koristi Long ID-eve
             stavka.setIdNarudzbe(sacuvanaNarudzba.getId());
             stavka.setIdJela(sDTO.getJeloId());
             stavka.setKolicina(sDTO.getKolicina());
@@ -89,7 +124,6 @@ public class KupacController {
                 .filter(j -> j.getRestoran() != null && restoranId.equals(j.getRestoran().getId()))
                 .toList());
     }
-
 
     @GetMapping("/narudzbe/{kupacId}")
     public ResponseEntity<List<MojeNarudzbeDTO>> getNarudzbeKupca(@PathVariable Long kupacId) {
