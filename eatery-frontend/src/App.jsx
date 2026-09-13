@@ -4,6 +4,7 @@ import RegisterKupac from './RegistarKupac';
 import AdminPanel from './AdminPanel';
 import RestoranPanel from './RestoranPanel';
 import KupacPanel from './KupacPanel';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
   const [user, setUser] = useState(null);

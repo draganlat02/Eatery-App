@@ -5,6 +5,7 @@ import MojeNarudzbe from './MojeNarudzbe';
 import KupacProfil from './KupacProfil';
 import HeroVrecice from './components/HeroVrecice';
 import './KupacPanel.css';
+import KupacMapa from './KupacMapa';
 
 function KupacPanel({ user }) {
 
@@ -782,6 +783,42 @@ function KupacPanel({ user }) {
                             </section>
 
                         )}
+                        {/* ================= MAPA RESTORANA ================= */}
+
+{/* ================= MAPA RESTORANA ================= */}
+
+{!izabraniRestoran && (
+
+    <section className="map-section">
+
+        <div className="section-heading">
+
+            <div>
+
+                <span className="section-label">
+                    PRONAĐITE RESTORAN
+                </span>
+
+                <h2>
+                    Restorani u vašoj blizini
+                </h2>
+
+                <p>
+                    Pogledajte restorane na mapi i pronađite
+                    one koji se nalaze u vašem radijusu.
+                </p>
+
+            </div>
+
+        </div>
+
+        <KupacMapa
+            onIzaberiRestoran={izaberiRestoran}
+        />
+
+    </section>
+
+)}
 
 
                         {/* ================= PORUKA ================= */}

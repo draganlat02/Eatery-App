@@ -17,4 +17,13 @@ public class KlijentEntity extends KorisnikEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_opisa")
     private OpisEntity opis;
+
+    @Column(name = "adresa")
+    private String adresa;
+
+    @Column(name = "lat")
+    private Double lat;
+
+    @Column(name = "lng")
+    private Double lng;
 }

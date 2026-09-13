@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./RestoranPanel.css";
+import UnosAdreseRestorana from './UnosAdreseRestorana';
+import KlijentProfil from './KlijentProfil';
 
 const RestoranPanel = ({ restoranId, user }) => {
 
@@ -1992,6 +1994,7 @@ const RestoranPanel = ({ restoranId, user }) => {
                         )}
 
                     </div>
+                    <KlijentProfil user={user} />
 
                 </section>
 
