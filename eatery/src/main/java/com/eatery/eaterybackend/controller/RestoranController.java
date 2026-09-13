@@ -7,7 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/restoran")
@@ -18,19 +21,24 @@ public class RestoranController {
     private final JeloRepository jeloRepository;
     private final KorisnikRepository korisnikRepository;
     private final NarudzbaRepository narudzbaRepository;
-    private final StavkaNarudzbeRepository stavkaNarudzbeRepository; // Dodato polje
+    private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
+    private final KlijentRepository klijentRepository;
 
     public RestoranController(KategorijaRepository kategorijaRepository,
                               JeloRepository jeloRepository,
                               KorisnikRepository korisnikRepository,
                               NarudzbaRepository narudzbaRepository,
-                              StavkaNarudzbeRepository stavkaNarudzbeRepository) { // Ubrizgavanje u konstruktor
+                              StavkaNarudzbeRepository stavkaNarudzbeRepository,
+                              KlijentRepository klijentRepository) {
         this.kategorijaRepository = kategorijaRepository;
         this.jeloRepository = jeloRepository;
         this.korisnikRepository = korisnikRepository;
         this.narudzbaRepository = narudzbaRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
+        this.klijentRepository = klijentRepository;
     }
+
+    // --- KATEGORIJE ---
 
     @GetMapping("/{restoranId}/kategorije")
     @Transactional(readOnly = true)
@@ -49,6 +57,8 @@ public class RestoranController {
 
         return ResponseEntity.ok(kategorijaRepository.save(kat));
     }
+
+    // --- JELA ---
 
     @GetMapping("/{restoranId}/jela")
     @Transactional(readOnly = true)
@@ -74,7 +84,8 @@ public class RestoranController {
         return ResponseEntity.ok(jeloRepository.save(jelo));
     }
 
-    // Preuzimanje svih narudžbi za određeni restoran: /api/restoran/{restoranId}/narudzbe
+    // --- NARUDŽBE ---
+
     @GetMapping("/{restoranId}/narudzbe")
     public ResponseEntity<List<MojeNarudzbeDTO>> getNarudzbeZaRestoran(@PathVariable Long restoranId) {
         List<NarudzbaEntity> narudzbe = narudzbaRepository.findByRestoranId(restoranId);
@@ -104,7 +115,6 @@ public class RestoranController {
         return ResponseEntity.ok(result);
     }
 
-    // Izmena statusa narudžbe: /api/restoran/narudzba/{narudzbaId}/status
     @PutMapping("/narudzba/{narudzbaId}/status")
     public ResponseEntity<?> promijeniStatusNarudzbe(@PathVariable Long narudzbaId, @RequestBody String noviStatus) {
         NarudzbaEntity narudzba = narudzbaRepository.findById(narudzbaId)
@@ -116,5 +126,83 @@ public class RestoranController {
         narudzbaRepository.save(narudzba);
 
         return ResponseEntity.ok("Status uspešno izmenjen!");
+    }
+
+    // --- PROFIL RESTORANA ---
+
+    @GetMapping("/{restoranId}/profil")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getProfilRestorana(@PathVariable Long restoranId) {
+        return klijentRepository.findById(restoranId)
+                .map(klijent -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("id", klijent.getId());
+                    response.put("nazivObjekta", klijent.getNazivObjekta());
+                    response.put("adresa", klijent.getAdresa());
+                    response.put("lat", klijent.getLat());
+                    response.put("lng", klijent.getLng());
+                    return ResponseEntity.ok((Object) response);
+                })
+                .orElseGet(() -> ResponseEntity.badRequest().body((Object) "Restoran nije pronađen!"));
+    }
+
+    @PutMapping("/{restoranId}/profil")
+    @Transactional
+    public ResponseEntity<?> azurirajProfilRestorana(@PathVariable Long restoranId,
+                                                     @RequestBody Map<String, Object> body) {
+        return klijentRepository.findById(restoranId)
+                .map(klijent -> {
+                    if (body.containsKey("nazivObjekta") && body.get("nazivObjekta") != null) {
+                        String noviNaziv = body.get("nazivObjekta").toString().trim();
+                        if (!noviNaziv.isEmpty()) {
+                            klijent.setNazivObjekta(noviNaziv);
+                        }
+                    }
+
+                    if (body.containsKey("adresa") && body.get("adresa") != null) {
+                        klijent.setAdresa(body.get("adresa").toString().trim());
+                    }
+                    if (body.containsKey("lat") && body.get("lat") != null) {
+                        klijent.setLat(((Number) body.get("lat")).doubleValue());
+                    }
+                    if (body.containsKey("lng") && body.get("lng") != null) {
+                        klijent.setLng(((Number) body.get("lng")).doubleValue());
+                    }
+
+                    KlijentEntity sacuvani = klijentRepository.save(klijent);
+
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("id", sacuvani.getId());
+                    response.put("nazivObjekta", sacuvani.getNazivObjekta());
+                    response.put("adresa", sacuvani.getAdresa());
+                    response.put("lat", sacuvani.getLat());
+                    response.put("lng", sacuvani.getLng());
+
+                    return ResponseEntity.ok((Object) response);
+                })
+                .orElseGet(() -> ResponseEntity.badRequest().body((Object) "Restoran nije pronađen!"));
+    }
+
+    @PutMapping("/{restoranId}/naziv")
+    @Transactional
+    public ResponseEntity<?> promijeniNazivObjekta(@PathVariable Long restoranId,
+                                                   @RequestBody String noviNaziv) {
+        String cistiNaziv = noviNaziv.replace("\"", "").trim();
+
+        if (cistiNaziv.isEmpty()) {
+            return ResponseEntity.badRequest().body("Naziv objekta ne može biti prazan!");
+        }
+
+        Optional<KlijentEntity> klijentOpt = klijentRepository.findById(restoranId);
+
+        if (klijentOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Klijent nije pronađen!");
+        }
+
+        KlijentEntity klijent = klijentOpt.get();
+        klijent.setNazivObjekta(cistiNaziv);
+        klijentRepository.save(klijent);
+
+        return ResponseEntity.ok("Naziv uspješno promijenjen u: " + cistiNaziv);
     }
 }

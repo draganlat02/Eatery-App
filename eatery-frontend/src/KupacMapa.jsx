@@ -461,74 +461,40 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
                             icon={RestoranIcon}
                         >
 
-                            <Popup
-                                className="premium-map-popup"
-                            >
+                         <Popup className="premium-map-popup">
+    <div className="restaurant-map-popup">
+        <div className="restaurant-popup-icon">
+            🍽️
+        </div>
 
-                                <div className="restaurant-map-popup">
+        <div className="restaurant-popup-body">
+            <h3>
+                {restoran.nazivObjekta || restoran.naziv || 'Restoran'}
+            </h3>
 
-                                    <div className="restaurant-popup-icon">
-                                        🍽️
-                                    </div>
+            <div className="restaurant-popup-address">
+                <span>📍</span>
+                <span>
+                    {restoran.adresa || 'Adresa nije unesena'}
+                </span>
+            </div>
 
-                                    <div className="restaurant-popup-body">
+            <div className="restaurant-popup-distance">
+                <span>Udaljenost</span>
+                <strong>
+                    {Number(restoran.udaljenostKm).toFixed(1)} km
+                </strong>
+            </div>
 
-                                        <h3>
-                                            {restoran.naziv ||
-                                                'Restoran'}
-                                        </h3>
-
-                                        <div className="restaurant-popup-address">
-
-                                            <span>
-                                                📍
-                                            </span>
-
-                                            <span>
-                                                {restoran.adresa ||
-                                                    'Adresa nije unesena'}
-                                            </span>
-
-                                        </div>
-
-                                        <div className="restaurant-popup-distance">
-
-                                            <span>
-                                                Udaljenost
-                                            </span>
-
-                                            <strong>
-                                                {Number(
-                                                    restoran.udaljenostKm
-                                                ).toFixed(1)}
-                                                {' '}km
-                                            </strong>
-
-                                        </div>
-
-
-                                        <button
-                                            className="map-popup-button"
-                                            onClick={() =>
-                                                otvoriRestoran(
-                                                    restoran
-                                                )
-                                            }
-                                        >
-
-                                            Pogledaj ponudu
-
-                                            <span>
-                                                →
-                                            </span>
-
-                                        </button>
-
-                                    </div>
-
-                                </div>
-
-                            </Popup>
+            <button
+                className="map-popup-button"
+                onClick={() => otvoriRestoran(restoran)}
+            >
+                Pogledaj meni
+            </button>
+        </div>
+    </div>
+</Popup>
 
                         </Marker>
 

@@ -718,9 +718,9 @@ const RestoranPanel = ({ restoranId, user }) => {
                             Dobrodošli,
                             <span>
                                 {" "}
-                                {user?.korisnickoIme ||
-                                    user?.ime ||
-                                    "restorane"}
+                                {user?.nazivObjekta ||  
+                                user?.korisnickoIme || 
+                                "restorane"}
                             </span>
                             !
                         </h1>

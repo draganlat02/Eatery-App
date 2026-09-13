@@ -40,7 +40,8 @@ function KlikNaMapuHandler({ onSelectCoordinates }) {
 }
 
 const KlijentProfil = () => {
-    const [profil, setProfil] = useState({ adresa: '', lat: 0, lng: 0 });
+    const [profil, setProfil] = useState({ nazivObjekta: '', adresa: '', lat: 0, lng: 0 });
+    const [nazivObjekta, setNazivObjekta] = useState('');
     const [novaAdresa, setNovaAdresa] = useState('');
     const [korisnikInfo, setKorisnikInfo] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -71,18 +72,21 @@ const KlijentProfil = () => {
             return;
         }
 
-        // Učitavanje postojeće lokacije
-        API.get(`/restorani/${korisnikData.id}/lokacija`)
+        // Učitavanje postojeće lokacije i naziva restorana
+        API.get(`/restoran/${korisnikData.id}/profil`)
             .then(res => {
                 if (res.data) {
                     setProfil(res.data);
+                    if (res.data.nazivObjekta) {
+                        setNazivObjekta(res.data.nazivObjekta);
+                    }
                     if (res.data.adresa) {
                         setNovaAdresa(res.data.adresa);
                     }
                 }
             })
             .catch(err => {
-                console.warn("Restoran još nema unesenu lokaciju:", err);
+                console.warn("Restoran još nema unese podatke o profilu:", err);
             })
             .finally(() => {
                 setLoading(false);
@@ -91,7 +95,6 @@ const KlijentProfil = () => {
 
     // 1. AUTOMATSKO POMJERANJE PINA KADA KORISNIK UTIPKA ADRESU (Debounce 700ms)
     useEffect(() => {
-        // Ako je korisnik sam pomjerio pin klikom/prevlačenjem, preskačemo geokodiranje teksta
         if (isManualPinMove.current) {
             isManualPinMove.current = false;
             return;
@@ -118,7 +121,7 @@ const KlijentProfil = () => {
             } catch (err) {
                 console.warn("Greška pri automatskom pronalasku adrese na mapi:", err);
             }
-        }, 700); // Čeka 700ms nakon što korisnik prestane kucati
+        }, 700);
 
         return () => clearTimeout(timer);
     }, [novaAdresa]);
@@ -130,7 +133,7 @@ const KlijentProfil = () => {
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
             );
             if (res.data && res.data.display_name) {
-                isManualPinMove.current = true; // Oznaka da je promjena potekla sa mape
+                isManualPinMove.current = true;
                 setNovaAdresa(res.data.display_name);
             }
         } catch (e) {
@@ -161,10 +164,15 @@ const KlijentProfil = () => {
         [],
     );
 
-    const handleSpremiLokaciju = async (e) => {
+    const handleSpremiProfil = async (e) => {
         if (e) e.preventDefault();
         setPoruka('');
         setGreska('');
+
+        if (!nazivObjekta.trim()) {
+            setGreska("Molimo unesite naziv objekta.");
+            return;
+        }
 
         if (!novaAdresa.trim()) {
             setGreska("Molimo unesite adresu.");
@@ -174,21 +182,25 @@ const KlijentProfil = () => {
         setSaving(true);
 
         try {
-            const res = await API.put(`/restorani/${korisnikInfo.id}/lokacija`, {
-                adresa: novaAdresa,
-                lat: profil.lat !== 0 ? profil.lat : null,
-                lng: profil.lng !== 0 ? profil.lng : null
-            });
+           const res = await API.put(`/restoran/${korisnikInfo.id}/profil`, {
+    nazivObjekta: nazivObjekta,
+    adresa: novaAdresa,
+    lat: profil.lat !== 0 ? profil.lat : null,
+    lng: profil.lng !== 0 ? profil.lng : null
+});
 
-            setProfil({
-                adresa: res.data.adresa,
-                lat: res.data.lat,
-                lng: res.data.lng
-            });
+// Ažuriranje lokalnih stanja odgovorom iz baze
+setProfil({
+    nazivObjekta: res.data.nazivObjekta || nazivObjekta,
+    adresa: res.data.adresa,
+    lat: res.data.lat,
+    lng: res.data.lng
+});
+setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
 
-            setPoruka("Lokacija je uspješno sačuvana!");
+            setPoruka("Podaci profila i lokacija su uspješno sačuvani!");
         } catch (err) {
-            console.error("Greška pri čuvanju lokacije:", err);
+            console.error("Greška pri čuvanju profila:", err);
 
             let errData = err.response?.data;
             if (typeof errData === 'object' && errData !== null) {
@@ -196,7 +208,7 @@ const KlijentProfil = () => {
             } else if (typeof errData === 'string') {
                 setGreska(errData);
             } else {
-                setGreska("Došlo je do greške pri određivanju lokacije.");
+                setGreska("Došlo je do greške pri čuvanju profila.");
             }
         } finally {
             setSaving(false);
@@ -225,8 +237,17 @@ const KlijentProfil = () => {
 
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
 
-            <h3>Unos / Ažuriranje Lokacije</h3>
-            
+            <h3>Unos / Ažuriranje Podataka Objekta</h3>
+
+            <p>
+                <strong>Naziv objekta:</strong>{' '}
+                {profil.nazivObjekta ? (
+                    <span style={{ color: 'green', fontWeight: 'bold' }}>{profil.nazivObjekta}</span>
+                ) : (
+                    <span style={{ color: '#888' }}>Naziv još uvijek nije unesen.</span>
+                )}
+            </p>
+
             <p>
                 <strong>Trenutna adresa:</strong>{' '}
                 {profil.adresa ? (
@@ -242,9 +263,20 @@ const KlijentProfil = () => {
                 </p>
             )}
 
-            <form onSubmit={handleSpremiLokaciju} style={{ marginTop: '15px' }}>
+            <form onSubmit={handleSpremiProfil} style={{ marginTop: '15px' }}>
+                <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Naziv Objekta (Restorana):</label>
+                    <input
+                        type="text"
+                        value={nazivObjekta}
+                        onChange={(e) => setNazivObjekta(e.target.value)}
+                        placeholder="Unesite naziv restorana (npr. Restoran Kod Marka)..."
+                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                    />
+                </div>
+
                 <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Unesite novu adresu ili izaberite na mapi:</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Unesite novu adresu ili izaberite na mapi:</label>
                     <input
                         type="text"
                         value={novaAdresa}
@@ -270,11 +302,11 @@ const KlijentProfil = () => {
                         marginBottom: '15px'
                     }}
                 >
-                    {saving ? 'Spremanje...' : 'Sačuvaj adresu'}
+                    {saving ? 'Spremanje...' : 'Sačuvaj podatke i adresu'}
                 </button>
             </form>
 
-            {/* MAPA SA PREVLAČENJEM I AUTOMATSKIM PINA */}
+            {/* MAPA SA PREVLAČENJEM I AUTOMATSKIM PINOM */}
             <div style={{ marginTop: '10px' }}>
                 <p style={{ fontSize: '0.85em', color: '#666', marginBottom: '5px' }}>
                     📍 <i>Kucanjem adrese pin se automatski pomjera. Takođe možete prevući pin ili kliknuti bilo gdje na mapu.</i>
@@ -296,7 +328,7 @@ const KlijentProfil = () => {
                                 ref={markerRef}
                             >
                                 <Popup>
-                                    <strong>{korisnikInfo?.korisnickoIme || 'Restoran'}</strong><br />
+                                    <strong>{nazivObjekta || korisnikInfo?.korisnickoIme || 'Restoran'}</strong><br />
                                     {novaAdresa || 'Izabrana lokacija'}
                                 </Popup>
                             </Marker>
