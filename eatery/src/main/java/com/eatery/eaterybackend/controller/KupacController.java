@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/kupac")
@@ -67,6 +68,49 @@ public class KupacController {
 
         return ResponseEntity.ok(dto);
     }
+
+    @PutMapping("/profil/{kupacId}")
+    public ResponseEntity<?> updateProfilKupca(
+            @PathVariable Long kupacId,
+            @RequestBody UpdateKupacProfilDTO dto
+    ) {
+        KorisnikEntity korisnik = korisnikRepository.findById(kupacId)
+                .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen sa ID: " + kupacId));
+
+        if (korisnik.getUloga() == null || !"KUPAC".equalsIgnoreCase(korisnik.getUloga())) {
+            return ResponseEntity.status(400).body(Map.of("message", "Korisnik nije kupac."));
+        }
+
+        KupacEntity kupac = kupacRepository.findById(kupacId).orElse(null);
+        if (kupac == null) {
+            return ResponseEntity.status(400).body(Map.of("message", "Profil kupca nije pronađen."));
+        }
+
+        String novoIme = dto.getIme() != null ? dto.getIme().trim() : "";
+        String noviEmail = dto.getEmail() != null ? dto.getEmail().trim() : "";
+        String novoKorisnickoIme = dto.getKorisnickoIme() != null ? dto.getKorisnickoIme().trim() : "";
+
+        if (novoIme.isEmpty() || noviEmail.isEmpty() || novoKorisnickoIme.isEmpty()) {
+            return ResponseEntity.status(400).body(Map.of("message", "Ime, email i korisničko ime su obavezni."));
+        }
+
+        if (!noviEmail.equalsIgnoreCase(kupac.getEmail()) && korisnikRepository.existsByEmail(noviEmail)) {
+            return ResponseEntity.status(400).body(Map.of("message", "Email je već zauzet."));
+        }
+
+        if (!novoKorisnickoIme.equalsIgnoreCase(kupac.getKorisnickoIme())
+                && korisnikRepository.existsByKorisnickoIme(novoKorisnickoIme)) {
+            return ResponseEntity.status(400).body(Map.of("message", "Korisničko ime je već zauzeto."));
+        }
+
+        kupac.setIme(novoIme);
+        kupac.setEmail(noviEmail);
+        kupac.setKorisnickoIme(novoKorisnickoIme);
+        kupacRepository.save(kupac);
+
+        return getProfilKupca(kupacId);
+    }
+
     // Preuzimanje svih aktiviranih restorana
     @GetMapping("/restorani")
     public ResponseEntity<List<KorisnikEntity>> getAktivniRestorani() {
