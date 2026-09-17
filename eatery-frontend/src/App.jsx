@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Login from './Login';
-import RegisterKupac from './RegistarKupac';
-import AdminPanel from './AdminPanel';
-import RestoranPanel from './RestoranPanel';
-import KupacPanel from './KupacPanel';
+import Login from './auth/Login';
+import RegisterKupac from './auth/RegistarKupac';
+import AdminPanel from './admin/AdminPanel';
+import RestoranPanel from './klijent/RestoranPanel';
+import KupacPanel from './kupac/KupacPanel';
 import 'leaflet/dist/leaflet.css';
 
 function App() {
@@ -27,48 +27,26 @@ function App() {
   };
 
   if (user) {
-    return (
-      <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>
-          <h2>Eatery App</h2>
-          <div>
-            <span>Prijavljeni ste kao: <strong>{user.korisnickoIme}</strong> ({user.uloga}) </span>
-            <button onClick={handleLogout} style={{ marginLeft: '10px', padding: '5px 10px', cursor: 'pointer' }}>Odjava</button>
-          </div>
-        </header>
+    if (user.uloga === 'KUPAC') {
+      return <KupacPanel user={user} onLogout={handleLogout} onUserUpdate={setUser} />;
+    }
 
-        <main style={{ marginTop: '20px' }}>
-          {user.uloga === 'KUPAC' && (
-            <KupacPanel user={user} />
-          )}
+    if (user.uloga === 'KLIJENT') {
+      return <RestoranPanel user={user} onLogout={handleLogout} />;
+    }
 
-          {user.uloga === 'KLIJENT' && (
-            <RestoranPanel user={user} />
-          )}
-
-          {user.uloga === 'ADMINISTRATOR' && (
-            <AdminPanel />
-          )}
-        </main>
-      </div>
-    );
+    if (user.uloga === 'ADMINISTRATOR') {
+      return <AdminPanel user={user} onLogout={handleLogout} />;
+    }
   }
 
-  return (
-    <div>
-      {isRegistering ? (
-        <RegisterKupac onSwitchToLogin={() => setIsRegistering(false)} />
-      ) : (
-        <div>
-          <Login onLoginSuccess={(userData) => setUser(userData)} />
-          <div style={{ textAlign: 'center', marginTop: '10px' }}>
-            <button onClick={() => setIsRegistering(true)} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer' }}>
-              Nemate nalog? Registrujte se kao Kupac
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+  return isRegistering ? (
+    <RegisterKupac onSwitchToLogin={() => setIsRegistering(false)} />
+  ) : (
+    <Login
+      onLoginSuccess={(userData) => setUser(userData)}
+      onSwitchToRegister={() => setIsRegistering(true)}
+    />
   );
 }
 

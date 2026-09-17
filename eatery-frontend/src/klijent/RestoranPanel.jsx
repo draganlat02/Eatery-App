@@ -4,7 +4,7 @@ import "./RestoranPanel.css";
 import UnosAdreseRestorana from './UnosAdreseRestorana';
 import KlijentProfil from './KlijentProfil';
 
-const RestoranPanel = ({ restoranId, user }) => {
+const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
     // =========================================================
     // ID RESTORANA
@@ -30,6 +30,8 @@ const RestoranPanel = ({ restoranId, user }) => {
     const [jela, setJela] = useState([]);
 
     const [novaKategorija, setNovaKategorija] = useState("");
+    const [stranicaNarudzbi, setStranicaNarudzbi] = useState(1);
+    const NARUDZBI_PO_STRANICI = 5;
 
     const [novoJelo, setNovoJelo] = useState({
         naziv: "",
@@ -526,6 +528,22 @@ const RestoranPanel = ({ restoranId, user }) => {
                 n.status === "ZAPRIMLJENO"
         ).length;
 
+    const ukupnoStranicaNarudzbi = Math.max(
+        1,
+        Math.ceil(narudzbe.length / NARUDZBI_PO_STRANICI)
+    );
+
+    const prikazaneNarudzbe = narudzbe.slice(
+        (stranicaNarudzbi - 1) * NARUDZBI_PO_STRANICI,
+        stranicaNarudzbi * NARUDZBI_PO_STRANICI
+    );
+
+    useEffect(() => {
+        if (stranicaNarudzbi > ukupnoStranicaNarudzbi) {
+            setStranicaNarudzbi(ukupnoStranicaNarudzbi);
+        }
+    }, [stranicaNarudzbi, ukupnoStranicaNarudzbi]);
+
 
     // =========================================================
     // STATISTIKA
@@ -670,21 +688,43 @@ const RestoranPanel = ({ restoranId, user }) => {
                             Vrećice
                         </button>
 
+                        <button
+                            className={
+                                aktivnaSekcija === "profil"
+                                    ? "restoran-nav-link active"
+                                    : "restoran-nav-link"
+                            }
+                            onClick={() =>
+                                idiNaSekciju(
+                                    "profil",
+                                    "profil"
+                                )
+                            }
+                        >
+                            <span>👤</span>
+                            Profil
+                        </button>
+
                     </nav>
 
-
-                    {/* ID / RESTORAN */}
-
-                    <div className="restaurant-id-box">
-
-                        <span>
-                            Restoran
-                        </span>
-
-                        <strong>
-                            #{stvarniRestoranId || "—"}
-                        </strong>
-
+                    <div className="navbar-actions">
+                        <div className="restaurant-id-box">
+                            <span>
+                                Restoran
+                            </span>
+                            <strong>
+                                #{stvarniRestoranId || "—"}
+                            </strong>
+                        </div>
+                        {onLogout && (
+                            <button
+                                className="navbar-logout"
+                                type="button"
+                                onClick={onLogout}
+                            >
+                                Odjava
+                            </button>
+                        )}
                     </div>
 
                 </div>
@@ -881,7 +921,7 @@ const RestoranPanel = ({ restoranId, user }) => {
                                     <p>
                                         {narudzbe.length === 0
                                             ? "Trenutno nema narudžbi"
-                                            : `${narudzbe.length} ukupno`}
+                                            : `Prikaz ${prikazaneNarudzbe.length} od ${narudzbe.length}`}
                                     </p>
 
                                 </div>
@@ -945,9 +985,10 @@ const RestoranPanel = ({ restoranId, user }) => {
 
                         ) : (
 
+                            <>
                             <div className="orders-list">
 
-                                {narudzbe.map(n => (
+                                {prikazaneNarudzbe.map(n => (
 
                                     <article
                                         className="order-card"
@@ -1102,6 +1143,43 @@ const RestoranPanel = ({ restoranId, user }) => {
                                 ))}
 
                             </div>
+
+                            {narudzbe.length > NARUDZBI_PO_STRANICI && (
+                                <div className="orders-pagination">
+                                    <button
+                                        type="button"
+                                        disabled={stranicaNarudzbi === 1}
+                                        onClick={() =>
+                                            setStranicaNarudzbi(
+                                                stranica => Math.max(1, stranica - 1)
+                                            )
+                                        }
+                                    >
+                                        Prethodna
+                                    </button>
+
+                                    <span>
+                                        Stranica {stranicaNarudzbi} od {ukupnoStranicaNarudzbi}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        disabled={stranicaNarudzbi === ukupnoStranicaNarudzbi}
+                                        onClick={() =>
+                                            setStranicaNarudzbi(
+                                                stranica =>
+                                                    Math.min(
+                                                        ukupnoStranicaNarudzbi,
+                                                        stranica + 1
+                                                    )
+                                            )
+                                        }
+                                    >
+                                        Sljedeća
+                                    </button>
+                                </div>
+                            )}
+                            </>
 
                         )}
 
@@ -1994,8 +2072,14 @@ const RestoranPanel = ({ restoranId, user }) => {
                         )}
 
                     </div>
-                    <KlijentProfil user={user} />
 
+                </section>
+
+                <section
+                    className="restaurant-section"
+                    id="profil"
+                >
+                    <KlijentProfil user={user} />
                 </section>
 
             </main>

@@ -8,7 +8,7 @@ import {
     useMap
 } from 'react-leaflet';
 
-import API from './api';
+import API from '../api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './KupacMapa.css';

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import API from './api';
+import API from '../api';
 import L from 'leaflet';
 import axios from 'axios';
+import './KlijentProfil.css';
 
 // Leaflet CSS i popravka ikone pina
 import 'leaflet/dist/leaflet.css';
@@ -216,102 +217,80 @@ setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
     };
 
     if (loading) {
-        return <div style={{ padding: '20px', textAlign: 'center' }}>Učitavanje profila...</div>;
+        return <div className="klijent-profil-loading">Učitavanje profila...</div>;
     }
 
-    const mapCenter = (profil.lat !== 0 && profil.lng !== 0) 
-        ? [profil.lat, profil.lng] 
+    const mapCenter = (profil.lat !== 0 && profil.lng !== 0)
+        ? [profil.lat, profil.lng]
         : [44.77218, 17.19100];
 
     return (
-        <div style={{ maxWidth: '650px', margin: '30px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', fontFamily: 'Arial, sans-serif' }}>
-            <h2>Profil Restorana</h2>
+        <div className="klijent-profil">
+            <div className="klijent-profil-heading">
+                <span>LOKACIJA I PODACI</span>
+                <h2>Profil restorana</h2>
+                <p>Ažurirajte naziv objekta i lokaciju kako bi kupci mogli pronaći restoran.</p>
+            </div>
 
-            {korisnikInfo && (
-                <div style={{ marginBottom: '20px', background: '#f9f9f9', padding: '15px', borderRadius: '5px' }}>
-                    <p><strong>Korisničko ime:</strong> {korisnikInfo.korisnickoIme}</p>
-                    <p><strong>Email:</strong> {korisnikInfo.email}</p>
-                    <p><strong>Uloga:</strong> {korisnikInfo.uloga}</p>
-                </div>
-            )}
-
-            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
-
-            <h3>Unos / Ažuriranje Podataka Objekta</h3>
-
-            <p>
-                <strong>Naziv objekta:</strong>{' '}
-                {profil.nazivObjekta ? (
-                    <span style={{ color: 'green', fontWeight: 'bold' }}>{profil.nazivObjekta}</span>
-                ) : (
-                    <span style={{ color: '#888' }}>Naziv još uvijek nije unesen.</span>
+            <div className="klijent-profil-card">
+                {korisnikInfo && (
+                    <div className="klijent-profil-meta">
+                        <div>
+                            <span>Korisničko ime</span>
+                            <strong>{korisnikInfo.korisnickoIme}</strong>
+                        </div>
+                        <div>
+                            <span>Email</span>
+                            <strong>{korisnikInfo.email || 'Nije unesen'}</strong>
+                        </div>
+                        <div>
+                            <span>Naziv objekta</span>
+                            <strong>{profil.nazivObjekta || 'Još nije unesen'}</strong>
+                        </div>
+                    </div>
                 )}
-            </p>
 
-            <p>
-                <strong>Trenutna adresa:</strong>{' '}
-                {profil.adresa ? (
-                    <span style={{ color: 'green', fontWeight: 'bold' }}>{profil.adresa}</span>
-                ) : (
-                    <span style={{ color: '#888' }}>Lokacija još uvijek nije unesena.</span>
-                )}
-            </p>
+                <form className="klijent-profil-form" onSubmit={handleSpremiProfil}>
+                    <div>
+                        <label htmlFor="naziv-objekta">Naziv objekta</label>
+                        <input
+                            id="naziv-objekta"
+                            type="text"
+                            value={nazivObjekta}
+                            onChange={(e) => setNazivObjekta(e.target.value)}
+                            placeholder="npr. Restoran Kod Marka"
+                        />
+                    </div>
 
-            {profil.lat !== 0 && profil.lng !== 0 && (
-                <p style={{ fontSize: '0.9em', color: '#555' }}>
-                    <strong>Koordinate:</strong> Lat: {profil.lat.toFixed(6)}, Lng: {profil.lng.toFixed(6)}
+                    <div>
+                        <label htmlFor="adresa-objekta">Adresa</label>
+                        <input
+                            id="adresa-objekta"
+                            type="text"
+                            value={novaAdresa}
+                            onChange={(e) => setNovaAdresa(e.target.value)}
+                            placeholder="npr. Kralja Petra I, Banja Luka"
+                        />
+                    </div>
+
+                    {profil.lat !== 0 && profil.lng !== 0 && (
+                        <p className="klijent-profil-hint">
+                            Koordinate: {profil.lat.toFixed(6)}, {profil.lng.toFixed(6)}
+                        </p>
+                    )}
+
+                    {poruka && <p className="klijent-profil-message ok">{poruka}</p>}
+                    {greska && <p className="klijent-profil-message err">{String(greska)}</p>}
+
+                    <button className="klijent-profil-submit" type="submit" disabled={saving}>
+                        {saving ? 'Spremanje...' : 'Sačuvaj podatke i adresu'}
+                    </button>
+                </form>
+
+                <p className="klijent-profil-map-note">
+                    Unesite adresu ili kliknite / prevucite pin na mapi.
                 </p>
-            )}
-
-            <form onSubmit={handleSpremiProfil} style={{ marginTop: '15px' }}>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Naziv Objekta (Restorana):</label>
-                    <input
-                        type="text"
-                        value={nazivObjekta}
-                        onChange={(e) => setNazivObjekta(e.target.value)}
-                        placeholder="Unesite naziv restorana (npr. Restoran Kod Marka)..."
-                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-                    />
-                </div>
-
-                <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Unesite novu adresu ili izaberite na mapi:</label>
-                    <input
-                        type="text"
-                        value={novaAdresa}
-                        onChange={(e) => setNovaAdresa(e.target.value)}
-                        placeholder="Unesite adresu restorana (npr. Banja Luka, Kralja Petra I)..."
-                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-                    />
-                </div>
-
-                {poruka && <p style={{ color: 'green', fontWeight: 'bold' }}>{poruka}</p>}
-                {greska && <p style={{ color: 'red', fontWeight: 'bold' }}>{String(greska)}</p>}
-
-                <button 
-                    type="submit" 
-                    disabled={saving}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#007bff',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        marginBottom: '15px'
-                    }}
-                >
-                    {saving ? 'Spremanje...' : 'Sačuvaj podatke i adresu'}
-                </button>
-            </form>
-
-            {/* MAPA SA PREVLAČENJEM I AUTOMATSKIM PINOM */}
-            <div style={{ marginTop: '10px' }}>
-                <p style={{ fontSize: '0.85em', color: '#666', marginBottom: '5px' }}>
-                    📍 <i>Kucanjem adrese pin se automatski pomjera. Takođe možete prevući pin ili kliknuti bilo gdje na mapu.</i>
-                </p>
-                <div style={{ height: '350px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ccc' }}>
+                <div className="klijent-profil-map">
                     <MapContainer center={mapCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -319,12 +298,12 @@ setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
                         />
                         <CentrirajMapu lat={profil.lat} lng={profil.lng} />
                         <KlikNaMapuHandler onSelectCoordinates={handleMapClick} />
-                        
+
                         {(profil.lat !== 0 || profil.lng !== 0) && (
-                            <Marker 
-                                draggable={true} 
-                                eventHandlers={eventHandlers} 
-                                position={[profil.lat !== 0 ? profil.lat : 44.77218, profil.lng !== 0 ? profil.lng : 17.19100]} 
+                            <Marker
+                                draggable={true}
+                                eventHandlers={eventHandlers}
+                                position={[profil.lat !== 0 ? profil.lat : 44.77218, profil.lng !== 0 ? profil.lng : 17.19100]}
                                 ref={markerRef}
                             >
                                 <Popup>

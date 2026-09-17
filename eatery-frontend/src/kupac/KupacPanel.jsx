@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import API from './api';
+import API from '../api';
 import MojeNarudzbe from './MojeNarudzbe';
 import KupacProfil from './KupacProfil';
-import HeroVrecice from './components/HeroVrecice';
+import HeroVrecice from './HeroVrecice';
 import './KupacPanel.css';
 import KupacMapa from './KupacMapa';
 
-function KupacPanel({ user }) {
+function KupacPanel({ user, onLogout, onUserUpdate }) {
 
     const [restorani, setRestorani] = useState([]);
     const [izabraniRestoran, setIzabraniRestoran] = useState(null);
@@ -510,9 +510,6 @@ function KupacPanel({ user }) {
                     <div
                         className="brand"
                         onClick={idiNaRestorane}
-                        style={{
-                            cursor: 'pointer'
-                        }}
                     >
 
                         <div className="brand-logo">
@@ -590,26 +587,33 @@ function KupacPanel({ user }) {
 
                     {/* CART */}
 
-                    <button
-                        className="navbar-cart"
-                        onClick={idiNaKorpu}
-                    >
-
-                        <span className="cart-icon">
-                            🛒
-                        </span>
-
-                        <span>
-                            Korpa
-                        </span>
-
-                        {brojArtikala > 0 && (
-                            <span className="cart-badge">
-                                {brojArtikala}
+                    <div className="navbar-actions">
+                        <button
+                            className="navbar-cart"
+                            onClick={idiNaKorpu}
+                        >
+                            <span className="cart-icon">
+                                🛒
                             </span>
+                            <span>
+                                Korpa
+                            </span>
+                            {brojArtikala > 0 && (
+                                <span className="cart-badge">
+                                    {brojArtikala}
+                                </span>
+                            )}
+                        </button>
+                        {onLogout && (
+                            <button
+                                className="navbar-logout"
+                                type="button"
+                                onClick={onLogout}
+                            >
+                                Odjava
+                            </button>
                         )}
-
-                    </button>
+                    </div>
 
                 </div>
 
@@ -631,6 +635,8 @@ function KupacPanel({ user }) {
 
                     <KupacProfil
                        kupacId={user?.id || user?.idKorisnika}
+                       user={user}
+                       onUserUpdate={onUserUpdate}
                     />
 
                 )}
