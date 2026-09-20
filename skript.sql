@@ -132,6 +132,11 @@ CREATE TABLE IF NOT EXISTS `eatery_db`.`klijent` (
   `naziv_objekta` VARCHAR(255) NOT NULL,
   `id_korisnika` BIGINT NOT NULL,
   `id_opisa` BIGINT NULL DEFAULT NULL,
+  `adresa` VARCHAR(500) NULL DEFAULT NULL,
+  `lat` DOUBLE NULL DEFAULT NULL,
+  `lng` DOUBLE NULL DEFAULT NULL,
+  `radno_vrijeme_od` VARCHAR(10) NULL DEFAULT NULL,
+  `radno_vrijeme_do` VARCHAR(10) NULL DEFAULT NULL,
   PRIMARY KEY (`id_korisnika`),
   INDEX `FKr4pfmle3njssf7k54tc6330pl` (`id_opisa` ASC) VISIBLE,
   CONSTRAINT `FK7jw3o4181ddltamey4d7eovt2`
@@ -256,6 +261,8 @@ CREATE TABLE IF NOT EXISTS `eatery_db`.`vrecica_iznenadjenja` (
   `vrijeme_kreiranja` DATETIME(6) NULL DEFAULT NULL,
   `vrijeme_preuzimanja_do` VARCHAR(255) NULL DEFAULT NULL,
   `vrijeme_preuzimanja_od` VARCHAR(255) NULL DEFAULT NULL,
+  `alergijska_upozorenja` VARCHAR(500) NULL DEFAULT NULL,
+  `tezina_kg` DECIMAL(10,2) NULL DEFAULT 1.00,
   `id_restorana` BIGINT NOT NULL,
   PRIMARY KEY (`id_vrecice`),
   INDEX `FKb680vb7e10x45qwf35fsccdle` (`id_restorana` ASC) VISIBLE,
@@ -287,3 +294,14 @@ COLLATE = utf8mb4_0900_ai_ci;
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+-- Evidencija alergijskih upozorenja na vrećicama iznenađenja
+ALTER TABLE `eatery_db`.`vrecica_iznenadjenja`
+  ADD COLUMN IF NOT EXISTS `alergijska_upozorenja` VARCHAR(500) NULL DEFAULT NULL;
+
+ALTER TABLE `eatery_db`.`klijent`
+  ADD COLUMN IF NOT EXISTS `radno_vrijeme_od` VARCHAR(10) NULL DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS `radno_vrijeme_do` VARCHAR(10) NULL DEFAULT NULL;
+
+ALTER TABLE `eatery_db`.`vrecica_iznenadjenja`
+  ADD COLUMN IF NOT EXISTS `tezina_kg` DECIMAL(10,2) NULL DEFAULT 1.00;

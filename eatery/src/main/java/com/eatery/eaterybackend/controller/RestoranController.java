@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +85,20 @@ public class RestoranController {
         return ResponseEntity.ok(jeloRepository.save(jelo));
     }
 
+    @GetMapping("/{restoranId}/statistika")
+    @Transactional(readOnly = true)
+    public ResponseEntity<RestoranStatistikaDTO> getStatistika(@PathVariable Long restoranId) {
+        Long prodane = narudzbaRepository.prebrojProdaneVrecicePoRestoranu(restoranId);
+        Long otkazane = narudzbaRepository.prebrojOtkazaneNarudzbePoRestoranu(restoranId);
+        BigDecimal kg = narudzbaRepository.kgSpaseneHranePoRestoranu(restoranId);
+
+        RestoranStatistikaDTO dto = new RestoranStatistikaDTO();
+        dto.setBrojProdanihVrecica(prodane != null ? prodane : 0L);
+        dto.setBrojOtkazanihNarudzbi(otkazane != null ? otkazane : 0L);
+        dto.setKgSpaseneHrane(kg != null ? kg : BigDecimal.ZERO);
+        return ResponseEntity.ok(dto);
+    }
+
     // --- NARUDŽBE ---
 
     @GetMapping("/{restoranId}/narudzbe")
@@ -141,6 +156,8 @@ public class RestoranController {
                     response.put("adresa", klijent.getAdresa());
                     response.put("lat", klijent.getLat());
                     response.put("lng", klijent.getLng());
+                    response.put("radnoVrijemeOd", klijent.getRadnoVrijemeOd());
+                    response.put("radnoVrijemeDo", klijent.getRadnoVrijemeDo());
                     return ResponseEntity.ok((Object) response);
                 })
                 .orElseGet(() -> ResponseEntity.badRequest().body((Object) "Restoran nije pronađen!"));
@@ -168,6 +185,16 @@ public class RestoranController {
                     if (body.containsKey("lng") && body.get("lng") != null) {
                         klijent.setLng(((Number) body.get("lng")).doubleValue());
                     }
+                    if (body.containsKey("radnoVrijemeOd")) {
+                        Object v = body.get("radnoVrijemeOd");
+                        String s = v != null ? v.toString().trim() : "";
+                        klijent.setRadnoVrijemeOd(s.isEmpty() ? null : s);
+                    }
+                    if (body.containsKey("radnoVrijemeDo")) {
+                        Object v = body.get("radnoVrijemeDo");
+                        String s = v != null ? v.toString().trim() : "";
+                        klijent.setRadnoVrijemeDo(s.isEmpty() ? null : s);
+                    }
 
                     KlijentEntity sacuvani = klijentRepository.save(klijent);
 
@@ -177,6 +204,8 @@ public class RestoranController {
                     response.put("adresa", sacuvani.getAdresa());
                     response.put("lat", sacuvani.getLat());
                     response.put("lng", sacuvani.getLng());
+                    response.put("radnoVrijemeOd", sacuvani.getRadnoVrijemeOd());
+                    response.put("radnoVrijemeDo", sacuvani.getRadnoVrijemeDo());
 
                     return ResponseEntity.ok((Object) response);
                 })

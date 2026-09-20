@@ -325,6 +325,24 @@
     line-height: 1.6;
 }
 
+.surprise-allergy {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.surprise-allergy strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
 
 /* =========================================================
    PRICE

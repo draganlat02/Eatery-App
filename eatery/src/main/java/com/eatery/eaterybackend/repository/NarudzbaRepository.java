@@ -38,4 +38,29 @@ public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> 
             ")",
             nativeQuery = true)
     BigDecimal izracunajUsteduPoKupcu(@Param("kupacId") Long kupacId);
+
+    @Query(value = "SELECT COALESCE(SUM(sn.kolicina), 0) " +
+            "FROM stavka_narudzbe sn " +
+            "JOIN narudzba n ON n.id_narudzbe = sn.id_narudzbe " +
+            "WHERE n.id_restorana = :restoranId " +
+            "AND UPPER(COALESCE(sn.tip_stavke, '')) = 'VRECICA' " +
+            "AND UPPER(n.status) IN ('DOSTAVLJENO', 'ZAVRSENO', 'ZAVRŠENO', 'ISPORUCENO', 'PREUZETO')",
+            nativeQuery = true)
+    Long prebrojProdaneVrecicePoRestoranu(@Param("restoranId") Long restoranId);
+
+    @Query(value = "SELECT COUNT(*) FROM narudzba n " +
+            "WHERE n.id_restorana = :restoranId " +
+            "AND UPPER(n.status) IN ('OTKAZANA', 'OTKAZANO', 'ODBIJENA')",
+            nativeQuery = true)
+    Long prebrojOtkazaneNarudzbePoRestoranu(@Param("restoranId") Long restoranId);
+
+    @Query(value = "SELECT COALESCE(SUM(COALESCE(vi.tezina_kg, 1) * sn.kolicina), 0) " +
+            "FROM stavka_narudzbe sn " +
+            "JOIN narudzba n ON n.id_narudzbe = sn.id_narudzbe " +
+            "JOIN vrecica_iznenadjenja vi ON vi.id_vrecice = sn.id_jela " +
+            "WHERE n.id_restorana = :restoranId " +
+            "AND UPPER(COALESCE(sn.tip_stavke, 'VRECICA')) = 'VRECICA' " +
+            "AND UPPER(n.status) IN ('DOSTAVLJENO', 'ZAVRSENO', 'ZAVRŠENO', 'ISPORUCENO', 'PREUZETO')",
+            nativeQuery = true)
+    BigDecimal kgSpaseneHranePoRestoranu(@Param("restoranId") Long restoranId);
 }

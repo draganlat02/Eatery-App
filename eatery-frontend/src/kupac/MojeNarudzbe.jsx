@@ -11,6 +11,8 @@ const statusMap = {
     SPREMNO: { className: 'ready', label: 'Spremno' },
     DOSTAVLJENO: { className: 'delivered', label: 'Dostavljeno' },
     ODBIJENA: { className: 'rejected', label: 'Odbijeno' },
+    OTKAZANA: { className: 'rejected', label: 'Otkazano' },
+    OTKAZANO: { className: 'rejected', label: 'Otkazano' },
 };
 
 const MojeNarudzbe = ({ kupacId }) => {

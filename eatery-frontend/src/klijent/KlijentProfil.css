@@ -84,6 +84,18 @@
     font-size: 15px;
 }
 
+.klijent-profil-hours {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 620px) {
+    .klijent-profil-hours {
+        grid-template-columns: 1fr;
+    }
+}
+
 .klijent-profil-form input:focus {
     outline: none;
     border-color: var(--primary);

@@ -18,17 +18,20 @@ public class KupacController {
 
     private final KorisnikRepository korisnikRepository;
     private final KupacRepository kupacRepository; // Dodato
+    private final KlijentRepository klijentRepository;
     private final JeloRepository jeloRepository;
     private final NarudzbaRepository narudzbaRepository;
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
 
     public KupacController(KorisnikRepository korisnikRepository,
                            KupacRepository kupacRepository,
+                           KlijentRepository klijentRepository,
                            JeloRepository jeloRepository,
                            NarudzbaRepository narudzbaRepository,
                            StavkaNarudzbeRepository stavkaNarudzbeRepository) {
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
+        this.klijentRepository = klijentRepository;
         this.jeloRepository = jeloRepository;
         this.narudzbaRepository = narudzbaRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
@@ -113,9 +116,9 @@ public class KupacController {
 
     // Preuzimanje svih aktiviranih restorana
     @GetMapping("/restorani")
-    public ResponseEntity<List<KorisnikEntity>> getAktivniRestorani() {
-        return ResponseEntity.ok(korisnikRepository.findAll().stream()
-                .filter(k -> "KLIJENT".equals(k.getUloga()) && Boolean.TRUE.equals(k.getAktiviran()))
+    public ResponseEntity<List<KlijentEntity>> getAktivniRestorani() {
+        return ResponseEntity.ok(klijentRepository.findAll().stream()
+                .filter(k -> Boolean.TRUE.equals(k.getAktiviran()))
                 .toList());
     }
 

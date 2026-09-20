@@ -6,6 +6,7 @@ import KupacProfil from './KupacProfil';
 import HeroVrecice from './HeroVrecice';
 import './KupacPanel.css';
 import KupacMapa from './KupacMapa';
+import { formatRadnoVrijeme, statusRadnogVremena } from './radnoVrijeme';
 
 function KupacPanel({ user, onLogout, onUserUpdate }) {
 
@@ -195,7 +196,9 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                 vrecica.akcijskaCijena,
 
             opis:
-                vrecica.opis
+                vrecica.alergijskaUpozorenja
+                    ? `${vrecica.opis || ''} Alergeni: ${vrecica.alergijskaUpozorenja}`.trim()
+                    : vrecica.opis
 
         };
 
@@ -411,6 +414,11 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     const nazivRestorana =
         izabraniRestoran?.nazivObjekta ||
         izabraniRestoran?.korisnickoIme;
+
+    const statusIzabranog = statusRadnogVremena(
+        izabraniRestoran?.radnoVrijemeOd,
+        izabraniRestoran?.radnoVrijemeDo
+    );
 
 
     /* =========================================================
@@ -906,7 +914,17 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                     <div className="restaurant-grid">
 
-                                        {restorani.map(r => (
+                                        {restorani.map(r => {
+                                            const status = statusRadnogVremena(
+                                                r.radnoVrijemeOd,
+                                                r.radnoVrijemeDo
+                                            );
+                                            const hours = formatRadnoVrijeme(
+                                                r.radnoVrijemeOd,
+                                                r.radnoVrijemeDo
+                                            );
+
+                                            return (
 
                                             <article
                                                 className="restaurant-card"
@@ -925,11 +943,11 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                                         🍴
                                                     </div>
 
-                                                    <div className="restaurant-status">
+                                                    <div className={`restaurant-status${status.open === false ? ' closed' : status.open === null ? ' unknown' : ''}`}>
 
                                                         <span />
 
-                                                        Otvoreno
+                                                        {status.label}
 
                                                     </div>
 
@@ -961,11 +979,7 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                                     <div className="restaurant-meta">
 
                                                         <span>
-                                                            •
-                                                        </span>
-
-                                                        <span>
-                                                            Pregledajte meni
+                                                            {hours || 'Radno vrijeme nije uneseno'}
                                                         </span>
 
                                                     </div>
@@ -994,7 +1008,8 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                             </article>
 
-                                        ))}
+                                        );
+                                        })}
 
                                     </div>
 
@@ -1053,8 +1068,9 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                         </h2>
 
                                         <p>
-                                            Izaberite jela koja želite
-                                            dodati u svoju korpu.
+                                            {statusIzabranog.hours
+                                                ? `${statusIzabranog.label} · ${statusIzabranog.hours}`
+                                                : statusIzabranog.label}
                                         </p>
 
                                     </div>

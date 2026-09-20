@@ -12,6 +12,7 @@ import API from '../api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './KupacMapa.css';
+import { formatRadnoVrijeme, statusRadnogVremena } from './radnoVrijeme';
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -253,7 +254,10 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
     const otvoriRestoran = (restoran) => {
 
         if (onIzaberiRestoran) {
-            onIzaberiRestoran(restoran);
+            onIzaberiRestoran({
+                ...restoran,
+                nazivObjekta: restoran.nazivObjekta || restoran.naziv
+            });
         }
 
     };
@@ -479,6 +483,27 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
                 </span>
             </div>
 
+            <div className="restaurant-popup-hours">
+                {(() => {
+                    const status = statusRadnogVremena(
+                        restoran.radnoVrijemeOd,
+                        restoran.radnoVrijemeDo
+                    );
+                    const hours = formatRadnoVrijeme(
+                        restoran.radnoVrijemeOd,
+                        restoran.radnoVrijemeDo
+                    );
+                    return (
+                        <>
+                            <span className={status.open === false ? 'closed' : ''}>
+                                {status.label}
+                            </span>
+                            {hours ? <strong>{hours}</strong> : null}
+                        </>
+                    );
+                })()}
+            </div>
+
             <div className="restaurant-popup-distance">
                 <span>Udaljenost</span>
                 <strong>
@@ -610,6 +635,22 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
                                             {restoran.adresa ||
                                                 'Adresa nije unesena'}
 
+                                        </p>
+
+                                        <p className="map-card-hours">
+                                            {(() => {
+                                                const status = statusRadnogVremena(
+                                                    restoran.radnoVrijemeOd,
+                                                    restoran.radnoVrijemeDo
+                                                );
+                                                const hours = formatRadnoVrijeme(
+                                                    restoran.radnoVrijemeOd,
+                                                    restoran.radnoVrijemeDo
+                                                );
+                                                return hours
+                                                    ? `${status.label} · ${hours}`
+                                                    : status.label;
+                                            })()}
                                         </p>
 
 

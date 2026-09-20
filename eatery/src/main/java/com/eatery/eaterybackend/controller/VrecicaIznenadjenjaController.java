@@ -49,9 +49,19 @@ public class VrecicaIznenadjenjaController {
         vrecica.setOriginalnaCijena(dto.getOriginalnaCijena());
         vrecica.setAkcijskaCijena(dto.getAkcijskaCijena());
         vrecica.setKolicina(dto.getKolicina());
+        vrecica.setTezinaKg(
+                dto.getTezinaKg() != null && dto.getTezinaKg().signum() > 0
+                        ? dto.getTezinaKg()
+                        : java.math.BigDecimal.ONE
+        );
         vrecica.setVrijemePreuzimanjaOd(dto.getVrijemePreuzimanjaOd());
         vrecica.setVrijemePreuzimanjaDo(dto.getVrijemePreuzimanjaDo());
         vrecica.setAktivna(dto.getAktivna() != null ? dto.getAktivna() : true);
+        vrecica.setAlergijskaUpozorenja(
+                dto.getAlergijskaUpozorenja() != null && !dto.getAlergijskaUpozorenja().isBlank()
+                        ? dto.getAlergijskaUpozorenja().trim()
+                        : null
+        );
 
         return ResponseEntity.ok(vrecicaRepository.save(vrecica));
     }

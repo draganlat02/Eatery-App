@@ -144,6 +144,13 @@ function HeroVrecice({ onDodajUVrecicu }) {
                                             'Odabrana hrana iz restorana po posebnoj cijeni.'}
                                     </p>
 
+                                    {v.alergijskaUpozorenja && (
+                                        <div className="surprise-allergy">
+                                            <strong>Alergijsko upozorenje:</strong>
+                                            <span>{v.alergijskaUpozorenja}</span>
+                                        </div>
+                                    )}
+
 
                                     {/* PRICE */}
                                     <div className="surprise-price-row">

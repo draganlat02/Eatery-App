@@ -28,6 +28,11 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
     const [kategorije, setKategorije] = useState([]);
     const [jela, setJela] = useState([]);
+    const [statistika, setStatistika] = useState({
+        brojProdanihVrecica: 0,
+        brojOtkazanihNarudzbi: 0,
+        kgSpaseneHrane: 0
+    });
 
     const [novaKategorija, setNovaKategorija] = useState("");
     const [stranicaNarudzbi, setStranicaNarudzbi] = useState(1);
@@ -60,10 +65,28 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
         originalnaCijena: "",
         akcijskaCijena: "",
         kolicina: 1,
+        tezinaKg: "1",
         vrijemePreuzimanjaOd: "20:00",
         vrijemePreuzimanjaDo: "21:30",
-        aktivna: true
+        aktivna: true,
+        alergije: [],
+        dodatnaAlergija: ""
     };
+
+    const ALERGENI = [
+        "Gluten",
+        "Mlijeko",
+        "Jaja",
+        "Kikiriki",
+        "Orašasti plodovi",
+        "Soja",
+        "Riba",
+        "Školjke",
+        "Celer",
+        "Senf",
+        "Sezam",
+        "Sulfiti"
+    ];
 
     const [forma, setForma] = useState(pocetnaForma);
 
@@ -132,6 +155,35 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
     };
 
 
+    const ucitajStatistiku = async () => {
+
+        if (!stvarniRestoranId) return;
+
+        try {
+
+            const res = await axios.get(
+                `http://localhost:8000/api/restoran/${stvarniRestoranId}/statistika`
+            );
+
+            setStatistika({
+                brojProdanihVrecica:
+                    res.data.brojProdanihVrecica || 0,
+                brojOtkazanihNarudzbi:
+                    res.data.brojOtkazanihNarudzbi || 0,
+                kgSpaseneHrane:
+                    res.data.kgSpaseneHrane || 0
+            });
+
+        } catch (err) {
+
+            console.error(
+                "Greška pri učitavanju statistike:",
+                err
+            );
+        }
+    };
+
+
     // =========================================================
     // UČITAVANJE KATEGORIJA I JELA
     // =========================================================
@@ -184,6 +236,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
             ucitajVrecice();
             ucitajNarudzbe();
             ucitajKategorijeIJela();
+            ucitajStatistiku();
         }
 
     }, [stvarniRestoranId]);
@@ -349,6 +402,18 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
         });
     };
 
+    const toggleAlergen = (alergen) => {
+        setForma((prev) => {
+            const postoji = prev.alergije.includes(alergen);
+            return {
+                ...prev,
+                alergije: postoji
+                    ? prev.alergije.filter(a => a !== alergen)
+                    : [...prev.alergije, alergen]
+            };
+        });
+    };
+
 
     // =========================================================
     // KREIRANJE VREĆICE
@@ -389,13 +454,23 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                     10
                 ),
 
+            tezinaKg:
+                parseFloat(
+                    forma.tezinaKg
+                ) || 1,
+
             vrijemePreuzimanjaOd:
                 forma.vrijemePreuzimanjaOd,
 
             vrijemePreuzimanjaDo:
                 forma.vrijemePreuzimanjaDo,
 
-            aktivna: forma.aktivna
+            aktivna: forma.aktivna,
+
+            alergijskaUpozorenja: [
+                ...forma.alergije,
+                forma.dodatnaAlergija.trim()
+            ].filter(Boolean).join(", ")
         };
 
         try {
@@ -506,6 +581,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
             );
 
             ucitajNarudzbe();
+            ucitajStatistiku();
 
         } catch (err) {
 
@@ -626,6 +702,24 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                         >
                             <span>⌂</span>
                             Početna
+                        </button>
+
+
+                        <button
+                            className={
+                                aktivnaSekcija === "analitika"
+                                    ? "restoran-nav-link active"
+                                    : "restoran-nav-link"
+                            }
+                            onClick={() =>
+                                idiNaSekciju(
+                                    "analitika",
+                                    "analitika"
+                                )
+                            }
+                        >
+                            <span>▣</span>
+                            Analitika
                         </button>
 
 
@@ -825,6 +919,98 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                 </section>
 
 
+                <section
+                    className="restaurant-section restaurant-analytics"
+                    id="analitika"
+                >
+
+                    <div className="restaurant-section-heading">
+
+                        <div>
+
+                            <span className="section-label">
+                                PREGLED POSLOVANJA
+                            </span>
+
+                            <h2>
+                                Analitika restorana
+                            </h2>
+
+                            <p>
+                                Prodane vrećice, otkazane
+                                narudžbe i kilogrami hrane
+                                spašene od bacanja.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="analytics-grid">
+
+                        <article className="analytics-card">
+
+                            <span>
+                                Prodane vrećice
+                            </span>
+
+                            <strong>
+                                {statistika.brojProdanihVrecica}
+                            </strong>
+
+                            <p>
+                                Vrećice iznenađenja iz
+                                dostavljenih narudžbi.
+                            </p>
+
+                        </article>
+
+
+                        <article className="analytics-card">
+
+                            <span>
+                                Otkazane narudžbe
+                            </span>
+
+                            <strong>
+                                {statistika.brojOtkazanihNarudzbi}
+                            </strong>
+
+                            <p>
+                                Narudžbe sa statusom
+                                otkazano ili odbijeno.
+                            </p>
+
+                        </article>
+
+
+                        <article className="analytics-card highlight">
+
+                            <span>
+                                Spašena hrana
+                            </span>
+
+                            <strong>
+                                {Number(
+                                    statistika.kgSpaseneHrane ||
+                                        0
+                                ).toFixed(1)}
+                                <small> kg</small>
+                            </strong>
+
+                            <p>
+                                Težina dostavljenih vrećica
+                                koje nisu završile kao otpad.
+                            </p>
+
+                        </article>
+
+                    </div>
+
+                </section>
+
+
                 {/* =================================================
                     DIJAGNOSTIKA
                 ================================================= */}
@@ -1012,7 +1198,11 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
                                             <div
                                                 className={`order-status ${
-                                                    !n.status ||
+                                                    n.status === "OTKAZANA" ||
+                                                    n.status === "OTKAZANO" ||
+                                                    n.status === "ODBIJENA"
+                                                        ? "cancelled"
+                                                        : !n.status ||
                                                     n.status ===
                                                         "ZAPRIMLJENO"
                                                         ? "received"
@@ -1132,6 +1322,26 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                                                     }
                                                 >
                                                     Dostavljeno
+                                                </button>
+
+
+                                                <button
+                                                    className={
+                                                        n.status ===
+                                                            "OTKAZANA" ||
+                                                        n.status ===
+                                                            "OTKAZANO"
+                                                            ? "status-button selected cancel"
+                                                            : "status-button cancel"
+                                                    }
+                                                    onClick={() =>
+                                                        PromijeniStatusNarudzbe(
+                                                            n.id,
+                                                            "OTKAZANA"
+                                                        )
+                                                    }
+                                                >
+                                                    Otkaži
                                                 </button>
 
                                             </div>
@@ -1771,6 +1981,29 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
                                 </div>
 
+
+                                <div className="form-field">
+
+                                    <label>
+                                        Težina (kg)
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        step="0.1"
+                                        name="tezinaKg"
+                                        value={
+                                            forma.tezinaKg
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        required
+                                    />
+
+                                </div>
+
                             </div>
 
 
@@ -1838,6 +2071,43 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                                     </label>
 
                                 </div>
+
+                            </div>
+
+
+                            <div className="form-field full">
+
+                                <label>
+                                    Alergijska upozorenja
+                                </label>
+
+                                <p className="allergen-hint">
+                                    Označite alergene koji mogu biti u vrećici.
+                                </p>
+
+                                <div className="allergen-grid">
+                                    {ALERGENI.map(alergen => (
+                                        <label
+                                            className="allergen-chip"
+                                            key={alergen}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={forma.alergije.includes(alergen)}
+                                                onChange={() => toggleAlergen(alergen)}
+                                            />
+                                            <span>{alergen}</span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                <input
+                                    type="text"
+                                    name="dodatnaAlergija"
+                                    placeholder="Dodatna napomena (npr. sezamovo ulje)"
+                                    value={forma.dodatnaAlergija}
+                                    onChange={handleChange}
+                                />
 
                             </div>
 
@@ -1979,6 +2249,14 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                                                     "Vrećica iznenađenja"}
                                             </p>
 
+                                            {v.alergijskaUpozorenja && (
+                                                <div className="allergy-warning">
+                                                    <strong>Alergeni:</strong>
+                                                    {" "}
+                                                    {v.alergijskaUpozorenja}
+                                                </div>
+                                            )}
+
 
                                             <div className="bag-price">
 
@@ -1999,6 +2277,15 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
                                                     {" "}
                                                     KM
                                                 </strong>
+
+                                                <span className="bag-weight">
+                                                    {Number(
+                                                        v.tezinaKg ||
+                                                            1
+                                                    ).toFixed(1)}
+                                                    {" "}
+                                                    kg
+                                                </span>
 
                                             </div>
 

@@ -717,6 +717,22 @@
     color: #26765b;
 }
 
+.restaurant-status.closed {
+    color: #9a3b3b;
+}
+
+.restaurant-status.closed span {
+    background: #d36b6b;
+}
+
+.restaurant-status.unknown {
+    color: #6b7280;
+}
+
+.restaurant-status.unknown span {
+    background: #9ca3af;
+}
+
 .restaurant-status span {
     width: 6px;
     height: 6px;
@@ -3727,5 +3743,4 @@
         font-size: 12px;
     }
 
-}
 }

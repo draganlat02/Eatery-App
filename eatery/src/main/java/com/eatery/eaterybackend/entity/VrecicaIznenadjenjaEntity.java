@@ -39,6 +39,9 @@ public class VrecicaIznenadjenjaEntity {
     @Column(name = "kolicina", nullable = false)
     private Integer kolicina;
 
+    @Column(name = "tezina_kg", precision = 10, scale = 2)
+    private BigDecimal tezinaKg;
+
     @Column(name = "vrijeme_preuzimanja_od")
     private String vrijemePreuzimanjaOd; // npr. "20:00"
 
@@ -47,6 +50,9 @@ public class VrecicaIznenadjenjaEntity {
 
     @Column(name = "aktivna", nullable = false)
     private Boolean aktivna = true;
+
+    @Column(name = "alergijska_upozorenja", length = 500)
+    private String alergijskaUpozorenja;
 
     @Column(name = "vrijeme_kreiranja")
     private LocalDateTime vrijemeKreiranja;

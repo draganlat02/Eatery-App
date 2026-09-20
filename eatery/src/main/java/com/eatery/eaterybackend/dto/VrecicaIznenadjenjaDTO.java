@@ -13,7 +13,9 @@ public class VrecicaIznenadjenjaDTO {
     private BigDecimal originalnaCijena;
     private BigDecimal akcijskaCijena;
     private Integer kolicina;
+    private BigDecimal tezinaKg;
     private String vrijemePreuzimanjaOd;
     private String vrijemePreuzimanjaDo;
     private Boolean aktivna;
+    private String alergijskaUpozorenja;
 }

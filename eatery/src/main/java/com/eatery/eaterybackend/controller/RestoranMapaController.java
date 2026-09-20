@@ -122,7 +122,9 @@ public class RestoranMapaController {
                             r.getAdresa(),
                             r.getLat(),
                             r.getLng(),
-                            Math.round(dist * 10.0) / 10.0
+                            Math.round(dist * 10.0) / 10.0,
+                            r.getRadnoVrijemeOd(),
+                            r.getRadnoVrijemeDo()
                     ));
                 }
             }

@@ -14,4 +14,6 @@ public class RestoranMapaDTO {
     private Double lat;
     private Double lng;
     private Double udaljenostKm;
+    private String radnoVrijemeOd;
+    private String radnoVrijemeDo;
 }

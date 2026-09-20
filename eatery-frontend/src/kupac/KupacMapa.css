@@ -379,6 +379,26 @@
     line-height: 1.4;
 }
 
+.restaurant-popup-hours {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #26765b;
+    font-weight: 700;
+}
+
+.restaurant-popup-hours .closed {
+    color: #9a3b3b;
+}
+
+.restaurant-popup-hours strong {
+    color: #444;
+    font-weight: 600;
+}
+
 .restaurant-popup-distance {
     display: flex;
     justify-content: space-between;
@@ -623,6 +643,13 @@
 
     font-size: 12px;
     line-height: 1.4;
+}
+
+.map-card-hours {
+    margin: 6px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #26765b;
 }
 
 .map-card-bottom {

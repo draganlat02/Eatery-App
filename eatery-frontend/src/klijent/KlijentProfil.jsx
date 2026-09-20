@@ -41,9 +41,11 @@ function KlikNaMapuHandler({ onSelectCoordinates }) {
 }
 
 const KlijentProfil = () => {
-    const [profil, setProfil] = useState({ nazivObjekta: '', adresa: '', lat: 0, lng: 0 });
+    const [profil, setProfil] = useState({ nazivObjekta: '', adresa: '', lat: 0, lng: 0, radnoVrijemeOd: '', radnoVrijemeDo: '' });
     const [nazivObjekta, setNazivObjekta] = useState('');
     const [novaAdresa, setNovaAdresa] = useState('');
+    const [radnoVrijemeOd, setRadnoVrijemeOd] = useState('');
+    const [radnoVrijemeDo, setRadnoVrijemeDo] = useState('');
     const [korisnikInfo, setKorisnikInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [poruka, setPoruka] = useState('');
@@ -83,6 +85,12 @@ const KlijentProfil = () => {
                     }
                     if (res.data.adresa) {
                         setNovaAdresa(res.data.adresa);
+                    }
+                    if (res.data.radnoVrijemeOd) {
+                        setRadnoVrijemeOd(res.data.radnoVrijemeOd);
+                    }
+                    if (res.data.radnoVrijemeDo) {
+                        setRadnoVrijemeDo(res.data.radnoVrijemeDo);
                     }
                 }
             })
@@ -187,7 +195,9 @@ const KlijentProfil = () => {
     nazivObjekta: nazivObjekta,
     adresa: novaAdresa,
     lat: profil.lat !== 0 ? profil.lat : null,
-    lng: profil.lng !== 0 ? profil.lng : null
+    lng: profil.lng !== 0 ? profil.lng : null,
+    radnoVrijemeOd: radnoVrijemeOd || null,
+    radnoVrijemeDo: radnoVrijemeDo || null
 });
 
 // Ažuriranje lokalnih stanja odgovorom iz baze
@@ -195,9 +205,13 @@ setProfil({
     nazivObjekta: res.data.nazivObjekta || nazivObjekta,
     adresa: res.data.adresa,
     lat: res.data.lat,
-    lng: res.data.lng
+    lng: res.data.lng,
+    radnoVrijemeOd: res.data.radnoVrijemeOd || '',
+    radnoVrijemeDo: res.data.radnoVrijemeDo || ''
 });
 setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
+setRadnoVrijemeOd(res.data.radnoVrijemeOd || '');
+setRadnoVrijemeDo(res.data.radnoVrijemeDo || '');
 
             setPoruka("Podaci profila i lokacija su uspješno sačuvani!");
         } catch (err) {
@@ -229,7 +243,7 @@ setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
             <div className="klijent-profil-heading">
                 <span>LOKACIJA I PODACI</span>
                 <h2>Profil restorana</h2>
-                <p>Ažurirajte naziv objekta i lokaciju kako bi kupci mogli pronaći restoran.</p>
+                <p>Ažurirajte naziv, lokaciju i radno vrijeme kako bi kupci znali kad je restoran otvoren.</p>
             </div>
 
             <div className="klijent-profil-card">
@@ -272,6 +286,30 @@ setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
                             placeholder="npr. Kralja Petra I, Banja Luka"
                         />
                     </div>
+
+                    <div className="klijent-profil-hours">
+                        <div>
+                            <label htmlFor="radno-od">Radno vrijeme od</label>
+                            <input
+                                id="radno-od"
+                                type="time"
+                                value={radnoVrijemeOd}
+                                onChange={(e) => setRadnoVrijemeOd(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="radno-do">Radno vrijeme do</label>
+                            <input
+                                id="radno-do"
+                                type="time"
+                                value={radnoVrijemeDo}
+                                onChange={(e) => setRadnoVrijemeDo(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <p className="klijent-profil-hint">
+                        Kupci će vidjeti ovo radno vrijeme i da li je restoran trenutno otvoren.
+                    </p>
 
                     {profil.lat !== 0 && profil.lng !== 0 && (
                         <p className="klijent-profil-hint">
