@@ -3,7 +3,9 @@ package com.eatery.eaterybackend.controller;
 import com.eatery.eaterybackend.dto.*;
 import com.eatery.eaterybackend.entity.*;
 import com.eatery.eaterybackend.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +19,7 @@ import java.util.Map;
 public class KupacController {
 
     private final KorisnikRepository korisnikRepository;
-    private final KupacRepository kupacRepository; // Dodato
+    private final KupacRepository kupacRepository;
     private final KlijentRepository klijentRepository;
     private final JeloRepository jeloRepository;
     private final NarudzbaRepository narudzbaRepository;
@@ -37,19 +39,28 @@ public class KupacController {
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
     }
 
-    // Preuzimanje podataka za profil kupca (Osnovni podaci + Kupljene vrećice + Ušteda)
+    // Pomocna metoda za proveru autentičnosti
+    private boolean isKorisnikOvlascen(Long trazeniKorisnikId, Authentication authentication) {
+        if (authentication == null) return false;
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+        return ulogovani != null && ulogovani.getId().equals(trazeniKorisnikId);
+    }
+
+    // Preuzimanje podataka za profil kupca
     @GetMapping("/profil/{kupacId}")
-    public ResponseEntity<?> getProfilKupca(@PathVariable Long kupacId) {
-        // 1. Pronađi korisnika
+    public ResponseEntity<?> getProfilKupca(@PathVariable Long kupacId, Authentication authentication) {
+        if (!isKorisnikOvlascen(kupacId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za pristup ovom profilu!");
+        }
+
         KorisnikEntity korisnik = korisnikRepository.findById(kupacId)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen sa ID: " + kupacId));
 
-        // 2. Blokiraj ako korisnik nije uloga "KUPAC" (npr. ako je "KLIJENT" ili "ADMIN")
         if (korisnik.getUloga() == null || !"KUPAC".equalsIgnoreCase(korisnik.getUloga())) {
             return ResponseEntity.status(400).body("Korisnik sa ID " + kupacId + " nije kupac.");
         }
 
-        // 3. Pronađi specifične podatke kupca iz tabele 'kupac'
         KupacEntity kupac = kupacRepository.findById(kupacId).orElse(null);
 
         Long ukupnoVrecica = narudzbaRepository.prebrojVrecicePoKupcu(kupacId);
@@ -75,8 +86,13 @@ public class KupacController {
     @PutMapping("/profil/{kupacId}")
     public ResponseEntity<?> updateProfilKupca(
             @PathVariable Long kupacId,
-            @RequestBody UpdateKupacProfilDTO dto
+            @RequestBody UpdateKupacProfilDTO dto,
+            Authentication authentication
     ) {
+        if (!isKorisnikOvlascen(kupacId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Nemate dozvolu da menjate ovaj profil!"));
+        }
+
         KorisnikEntity korisnik = korisnikRepository.findById(kupacId)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen sa ID: " + kupacId));
 
@@ -111,10 +127,10 @@ public class KupacController {
         kupac.setKorisnickoIme(novoKorisnickoIme);
         kupacRepository.save(kupac);
 
-        return getProfilKupca(kupacId);
+        return getProfilKupca(kupacId, authentication);
     }
 
-    // Preuzimanje svih aktiviranih restorana
+    // Preuzimanje svih aktiviranih restorana (Javna ruta za ulogovane)
     @GetMapping("/restorani")
     public ResponseEntity<List<KlijentEntity>> getAktivniRestorani() {
         return ResponseEntity.ok(klijentRepository.findAll().stream()
@@ -125,15 +141,21 @@ public class KupacController {
     // Slanje narudžbe
     @PostMapping("/narudzba")
     @Transactional
-    public ResponseEntity<?> kreirajNarudzbu(@RequestBody KreirajNarudzbuDTO dto) {
-        KorisnikEntity kupac = korisnikRepository.findById(dto.getKupacId())
-                .orElseThrow(() -> new RuntimeException("Kupac nije pronađen sa ID: " + dto.getKupacId()));
+    public ResponseEntity<?> kreirajNarudzbu(@RequestBody KreirajNarudzbuDTO dto, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
+        }
+
+        // Osiguravamo da se narudžba pravi na ime ulogovanog kupca iz JWT-a
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovaniKupac = korisnikRepository.findByKorisnickoIme(ulogovaniUsername)
+                .orElseThrow(() -> new RuntimeException("Ulogovani kupac nije pronađen!"));
 
         KorisnikEntity restoran = korisnikRepository.findById(dto.getRestoranId())
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen sa ID: " + dto.getRestoranId()));
 
         NarudzbaEntity narudzba = new NarudzbaEntity();
-        narudzba.setKupac(kupac);
+        narudzba.setKupac(ulogovaniKupac); // Povezivanje sa kupcem iz JWT-a
         narudzba.setRestoran(restoran);
         narudzba.setAdresaDostave(dto.getAdresaDostave());
         narudzba.setUkupnaCijena(BigDecimal.ZERO);
@@ -164,7 +186,7 @@ public class KupacController {
         return ResponseEntity.ok("Narudžba uspešno poslana!");
     }
 
-    // Preuzimanje jela za izabrani restoran
+    // Preuzimanje jela za izabrani restoran (Javna ruta)
     @GetMapping("/restoran/{restoranId}/jela")
     public ResponseEntity<List<JeloEntity>> getJelaZaRestoran(@PathVariable Long restoranId) {
         return ResponseEntity.ok(jeloRepository.findAll().stream()
@@ -172,8 +194,13 @@ public class KupacController {
                 .toList());
     }
 
+    // Pregled narudžbi za kupca
     @GetMapping("/narudzbe/{kupacId}")
-    public ResponseEntity<List<MojeNarudzbeDTO>> getNarudzbeKupca(@PathVariable Long kupacId) {
+    public ResponseEntity<?> getNarudzbeKupca(@PathVariable Long kupacId, Authentication authentication) {
+        if (!isKorisnikOvlascen(kupacId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da gledate narudžbe drugog kupca!");
+        }
+
         List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacId(kupacId);
 
         List<MojeNarudzbeDTO> result = narudzbe.stream().map(n -> {

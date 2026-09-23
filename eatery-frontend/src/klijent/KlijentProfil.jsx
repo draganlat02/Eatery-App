@@ -57,49 +57,48 @@ const KlijentProfil = () => {
     const markerRef = useRef(null);
 
     useEffect(() => {
+        let isMounted = true;
         let korisnikData = null;
 
         try {
             const sacuvano = localStorage.getItem('user') || localStorage.getItem('korisnik');
             if (sacuvano) {
                 korisnikData = JSON.parse(sacuvano);
-                setKorisnikInfo(korisnikData);
+                if (isMounted) setKorisnikInfo(korisnikData);
             }
         } catch (e) {
             console.error("Greška pri čitanju korisnika:", e);
         }
 
         if (!korisnikData || !korisnikData.id) {
-            setGreska("Niste prijavljeni ili ID korisnika nije pronađen.");
-            setLoading(false);
+            if (isMounted) {
+                setGreska("Niste prijavljeni ili ID korisnika nije pronađen.");
+                setLoading(false);
+            }
             return;
         }
 
-        // Učitavanje postojeće lokacije i naziva restorana
+        // Učitavanje postojeće lokacije i naziva restorana (Zahtijeva JWT preko API instance)
         API.get(`/restoran/${korisnikData.id}/profil`)
             .then(res => {
-                if (res.data) {
+                if (isMounted && res.data) {
                     setProfil(res.data);
-                    if (res.data.nazivObjekta) {
-                        setNazivObjekta(res.data.nazivObjekta);
-                    }
-                    if (res.data.adresa) {
-                        setNovaAdresa(res.data.adresa);
-                    }
-                    if (res.data.radnoVrijemeOd) {
-                        setRadnoVrijemeOd(res.data.radnoVrijemeOd);
-                    }
-                    if (res.data.radnoVrijemeDo) {
-                        setRadnoVrijemeDo(res.data.radnoVrijemeDo);
-                    }
+                    if (res.data.nazivObjekta) setNazivObjekta(res.data.nazivObjekta);
+                    if (res.data.adresa) setNovaAdresa(res.data.adresa);
+                    if (res.data.radnoVrijemeOd) setRadnoVrijemeOd(res.data.radnoVrijemeOd);
+                    if (res.data.radnoVrijemeDo) setRadnoVrijemeDo(res.data.radnoVrijemeDo);
                 }
             })
             .catch(err => {
-                console.warn("Restoran još nema unese podatke o profilu:", err);
+                console.warn("Restoran još nema unesene podatke o profilu:", err);
             })
             .finally(() => {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             });
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // 1. AUTOMATSKO POMJERANJE PINA KADA KORISNIK UTIPKA ADRESU (Debounce 700ms)
@@ -113,8 +112,10 @@ const KlijentProfil = () => {
 
         const timer = setTimeout(async () => {
             try {
+                // Poziv eksternom OpenStreetMap servisu (BEZ JWT-a)
                 const res = await axios.get(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(novaAdresa)}`
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(novaAdresa)}`,
+                    { headers: { 'Accept-Language': 'bs,hr,sr' } }
                 );
                 if (res.data && res.data.length > 0) {
                     const prviRezultat = res.data[0];
@@ -138,8 +139,10 @@ const KlijentProfil = () => {
     // 2. REVERSE GEOCODING (Iz koordinata u naziv adrese pri kliku/prevlačenju pina)
     const azurirajAdresuPrekoKoordinata = async (lat, lng) => {
         try {
+            // Poziv eksternom OpenStreetMap servisu (BEZ JWT-a)
             const res = await axios.get(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+                { headers: { 'Accept-Language': 'bs,hr,sr' } }
             );
             if (res.data && res.data.display_name) {
                 isManualPinMove.current = true;
@@ -191,27 +194,28 @@ const KlijentProfil = () => {
         setSaving(true);
 
         try {
-           const res = await API.put(`/restoran/${korisnikInfo.id}/profil`, {
-    nazivObjekta: nazivObjekta,
-    adresa: novaAdresa,
-    lat: profil.lat !== 0 ? profil.lat : null,
-    lng: profil.lng !== 0 ? profil.lng : null,
-    radnoVrijemeOd: radnoVrijemeOd || null,
-    radnoVrijemeDo: radnoVrijemeDo || null
-});
+            // Slanje na tvoj backend (Zahtijeva JWT preko API instance)
+            const res = await API.put(`/restoran/${korisnikInfo.id}/profil`, {
+                nazivObjekta: nazivObjekta,
+                adresa: novaAdresa,
+                lat: profil.lat !== 0 ? profil.lat : null,
+                lng: profil.lng !== 0 ? profil.lng : null,
+                radnoVrijemeOd: radnoVrijemeOd || null,
+                radnoVrijemeDo: radnoVrijemeDo || null
+            });
 
-// Ažuriranje lokalnih stanja odgovorom iz baze
-setProfil({
-    nazivObjekta: res.data.nazivObjekta || nazivObjekta,
-    adresa: res.data.adresa,
-    lat: res.data.lat,
-    lng: res.data.lng,
-    radnoVrijemeOd: res.data.radnoVrijemeOd || '',
-    radnoVrijemeDo: res.data.radnoVrijemeDo || ''
-});
-setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
-setRadnoVrijemeOd(res.data.radnoVrijemeOd || '');
-setRadnoVrijemeDo(res.data.radnoVrijemeDo || '');
+            // Ažuriranje lokalnih stanja odgovorom iz baze
+            setProfil({
+                nazivObjekta: res.data.nazivObjekta || nazivObjekta,
+                adresa: res.data.adresa,
+                lat: res.data.lat,
+                lng: res.data.lng,
+                radnoVrijemeOd: res.data.radnoVrijemeOd || '',
+                radnoVrijemeDo: res.data.radnoVrijemeDo || ''
+            });
+            setNazivObjekta(res.data.nazivObjekta || nazivObjekta);
+            setRadnoVrijemeOd(res.data.radnoVrijemeOd || '');
+            setRadnoVrijemeDo(res.data.radnoVrijemeDo || '');
 
             setPoruka("Podaci profila i lokacija su uspješno sačuvani!");
         } catch (err) {

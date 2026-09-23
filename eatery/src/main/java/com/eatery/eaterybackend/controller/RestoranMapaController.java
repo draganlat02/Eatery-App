@@ -2,10 +2,13 @@ package com.eatery.eaterybackend.controller;
 
 import com.eatery.eaterybackend.dto.RestoranMapaDTO;
 import com.eatery.eaterybackend.dto.UpdateKlijentProfilDTO;
+import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.KlijentEntity;
 import com.eatery.eaterybackend.repository.KlijentRepository;
+import com.eatery.eaterybackend.repository.KorisnikRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,10 +25,27 @@ import java.util.Map;
 public class RestoranMapaController {
 
     private final KlijentRepository klijentRepository;
+    private final KorisnikRepository korisnikRepository;
+
+    // Pomoćna metoda za provjeru autentičnosti i vlasništva nad restoranom
+    private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
+        if (authentication == null) return false;
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+        return ulogovani != null && ulogovani.getId().equals(trazeniRestoranId);
+    }
+
     @PutMapping("/{restoranId}/lokacija")
     public ResponseEntity<?> azurirajLokacijuRestorana(
             @PathVariable Long restoranId,
-            @RequestBody UpdateKlijentProfilDTO dto) {
+            @RequestBody UpdateKlijentProfilDTO dto,
+            Authentication authentication) {
+
+        // JWT PROVJERA: Samo restoran kojem pripada nalog može ažurirati svoju lokaciju
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Nemate dozvolu da mijenjate lokaciju ovog restorana!");
+        }
 
         String adresa = dto.getAdresa();
         if (adresa == null || adresa.trim().isEmpty()) {
@@ -84,9 +104,9 @@ public class RestoranMapaController {
                 "lng", lng
         ));
     }
+
     @GetMapping("/{restoranId}/lokacija")
     public ResponseEntity<?> getLokacijaRestorana(@PathVariable Long restoranId) {
-        // Ako ne postoji klijent ili nema lokaciju, vraćamo prazne podatke umjesto greške 400
         KlijentEntity klijent = klijentRepository.findById(restoranId).orElse(null);
 
         if (klijent == null) {
@@ -103,6 +123,7 @@ public class RestoranMapaController {
                 "lng", klijent.getLng() != null ? klijent.getLng() : 0.0
         ));
     }
+
     @GetMapping("/u-blizini")
     public ResponseEntity<List<RestoranMapaDTO>> getRestoraniUBlizini(
             @RequestParam double lat,

@@ -9,31 +9,40 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
     const [greska, setGreska] = useState(false);
     const [ucitavanje, setUcitavanje] = useState(false);
     const [prikaziLozinku, setPrikaziLozinku] = useState(false);
+   
+    
+const handleLogin = async (e) => {
+    e.preventDefault();
+    setGreska(false);
+    setPoruka('Prijava u toku...');
+    setUcitavanje(true);
+    try {
+        const res = await API.post('/auth/login', { korisnickoIme, sifra });
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setGreska(false);
-        setPoruka('Prijava u toku...');
-        setUcitavanje(true);
-        try {
-            const res = await API.post('/auth/login', { korisnickoIme, sifra });
-            localStorage.setItem('user', JSON.stringify(res.data));
-            if (onLoginSuccess) {
-                onLoginSuccess(res.data);
-            }
-        } catch (err) {
-            setGreska(true);
-            if (err.response) {
-                setPoruka(err.response.data?.message || `Greška na serveru: Status ${err.response.status}`);
-            } else if (err.request) {
-                setPoruka('Backend server nije dostupan.');
-            } else {
-                setPoruka('Došlo je do greške: ' + err.message);
-            }
-        } finally {
-            setUcitavanje(false);
+        // 1. Sačuvaj token za Axios interceptor / API pozive
+        if (res.data.token) {
+            localStorage.setItem('token', res.data.token);
         }
-    };
+
+        // 2. Sačuvaj korisničke podatke (id, uloga, korisnickoIme...)
+        localStorage.setItem('user', JSON.stringify(res.data));
+
+        if (onLoginSuccess) {
+            onLoginSuccess(res.data);
+        }
+    } catch (err) {
+        setGreska(true);
+        if (err.response) {
+            setPoruka(err.response.data?.message || `Greška na serveru: Status ${err.response.status}`);
+        } else if (err.request) {
+            setPoruka('Backend server nije dostupan.');
+        } else {
+            setPoruka('Došlo je do greške: ' + err.message);
+        }
+    } finally {
+        setUcitavanje(false);
+    }
+};
 
     return (
         <div className="login-page">
@@ -103,5 +112,6 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
         </div>
     );
 }
+
 
 export default Login;

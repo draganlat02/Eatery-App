@@ -5,7 +5,9 @@ import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.VrecicaIznenadjenjaEntity;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,21 +26,38 @@ public class VrecicaIznenadjenjaController {
         this.korisnikRepository = korisnikRepository;
     }
 
-    // 1. DOHVAT SVIH AKTIVNIH VREĆICA (Za vrh početne stranice kod Kupca)
+    // Pomoćna metoda za provjeru autorizacije restorana
+    private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
+        if (authentication == null) return false;
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+        return ulogovani != null && ulogovani.getId().equals(trazeniRestoranId);
+    }
+
+    // 1. DOHVAT SVIH AKTIVNIH VREĆICA (Javna ruta za ulogovane kupce)
     @GetMapping("/aktivne")
     public ResponseEntity<List<VrecicaIznenadjenjaEntity>> getAktivneVrecice() {
         return ResponseEntity.ok(vrecicaRepository.findByAktivnaTrueAndKolicinaGreaterThan(0));
     }
 
-    // 2. DOHVAT VREĆICA ZA ODREĐENI RESTORAN (Za Restoranski panel)
+    // 2. DOHVAT VREĆICA ZA ODREĐENI RESTORAN
     @GetMapping("/restoran/{restoranId}")
-    public ResponseEntity<List<VrecicaIznenadjenjaEntity>> getVreciceZaRestoran(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getVreciceZaRestoran(@PathVariable Long restoranId, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za uvid u vrećice ovog restorana!");
+        }
         return ResponseEntity.ok(vrecicaRepository.findByRestoranId(restoranId));
     }
 
-    // 3. KREIRANJE NOVE VREĆICE IZNENAĐENJA (Restoran objavljuje)
+    // 3. KREIRANJE NOVE VREĆICE IZNENAĐENJA
     @PostMapping("/restoran/{restoranId}")
-    public ResponseEntity<?> dodajVrecicu(@PathVariable Long restoranId, @RequestBody VrecicaIznenadjenjaDTO dto) {
+    public ResponseEntity<?> dodajVrecicu(@PathVariable Long restoranId,
+                                          @RequestBody VrecicaIznenadjenjaDTO dto,
+                                          Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da objavljujete vrećice u ime ovog restorana!");
+        }
+
         KorisnikEntity restoran = korisnikRepository.findById(restoranId)
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen"));
 
@@ -66,11 +85,25 @@ public class VrecicaIznenadjenjaController {
         return ResponseEntity.ok(vrecicaRepository.save(vrecica));
     }
 
-    // 4. BRZA PROMENA STATUSI (Uključi / Isključi vrećicu na panelu)
+    // 4. BRZA PROMJENA STATUSA
     @PutMapping("/{vrecicaId}/status")
-    public ResponseEntity<?> promijeniStatus(@PathVariable Long vrecicaId, @RequestParam Boolean aktivna) {
+    public ResponseEntity<?> promijeniStatus(@PathVariable Long vrecicaId,
+                                             @RequestParam Boolean aktivna,
+                                             Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
+        }
+
         VrecicaIznenadjenjaEntity vrecica = vrecicaRepository.findById(vrecicaId)
                 .orElseThrow(() -> new RuntimeException("Vrećica nije pronađena"));
+
+        // Provjera da li ulogovani restoran posjeduje traženu vrećicu
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+
+        if (ulogovani == null || !vrecica.getRestoran().getId().equals(ulogovani.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da mijenjate status tuđe vrećice!");
+        }
 
         vrecica.setAktivna(aktivna);
         vrecicaRepository.save(vrecica);
@@ -80,9 +113,23 @@ public class VrecicaIznenadjenjaController {
 
     // 5. BRZO AŽURIRANJE KOLIČINE
     @PutMapping("/{vrecicaId}/kolicina")
-    public ResponseEntity<?> azurirajKolicinu(@PathVariable Long vrecicaId, @RequestParam Integer kolicina) {
+    public ResponseEntity<?> azurirajKolicinu(@PathVariable Long vrecicaId,
+                                              @RequestParam Integer kolicina,
+                                              Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
+        }
+
         VrecicaIznenadjenjaEntity vrecica = vrecicaRepository.findById(vrecicaId)
                 .orElseThrow(() -> new RuntimeException("Vrećica nije pronađena"));
+
+        // Provjera da li ulogovani restoran posjeduje traženu vrećicu
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+
+        if (ulogovani == null || !vrecica.getRestoran().getId().equals(ulogovani.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da mijenjate količinu tuđe vrećice!");
+        }
 
         vrecica.setKolicina(kolicina);
         vrecicaRepository.save(vrecica);

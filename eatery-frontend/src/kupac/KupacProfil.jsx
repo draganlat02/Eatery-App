@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import API from '../api';
 import './KupacPanel.css';
@@ -23,13 +22,15 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
             return;
         }
 
+        setLoading(true);
         API.get(`/kupac/profil/${kupacId}`)
             .then(res => {
-                setProfil(res.data);
+                const data = res.data || {};
+                setProfil(data);
                 setForma({
-                    ime: res.data.ime || '',
-                    email: res.data.email || '',
-                    korisnickoIme: res.data.korisnickoIme || ''
+                    ime: data.ime ?? '',
+                    email: data.email ?? '',
+                    korisnickoIme: data.korisnickoIme ?? ''
                 });
                 setGreska('');
             })
@@ -37,7 +38,7 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
                 console.error('Greška pri učitavanju profila:', err);
                 setGreska(
                     err.response?.data?.message ||
-                    err.response?.data ||
+                    (typeof err.response?.data === 'string' ? err.response.data : null) ||
                     'Greška pri učitavanju profila.'
                 );
             })
@@ -52,9 +53,9 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
 
     const otkaziIzmjene = () => {
         setForma({
-            ime: profil?.ime || '',
-            email: profil?.email || '',
-            korisnickoIme: profil?.korisnickoIme || ''
+            ime: profil?.ime ?? '',
+            email: profil?.email ?? '',
+            korisnickoIme: profil?.korisnickoIme ?? ''
         });
         setPoruka('');
         setUredi(false);
@@ -67,16 +68,19 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
 
         try {
             const res = await API.put(`/kupac/profil/${kupacId}`, forma);
-            setProfil(res.data);
+            const updatedData = res.data;
+            
+            setProfil(updatedData);
             setUredi(false);
             setPoruka('Profil je uspješno sačuvan.');
 
             const azuriraniUser = {
                 ...(user || {}),
-                korisnickoIme: res.data.korisnickoIme,
-                email: res.data.email,
-                ime: res.data.ime
+                korisnickoIme: updatedData.korisnickoIme,
+                email: updatedData.email,
+                ime: updatedData.ime
             };
+            
             localStorage.setItem('user', JSON.stringify(azuriraniUser));
             if (onUserUpdate) {
                 onUserUpdate(azuriraniUser);
@@ -146,6 +150,13 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
                     </div>
 
                     <div className="profile-info-list">
+                        <div className="profile-info-row">
+                            <div className="profile-info-icon">👤</div>
+                            <div>
+                                <span className="profile-info-label">Ime i prezime</span>
+                                <strong>{profil.ime || 'Nije uneseno'}</strong>
+                            </div>
+                        </div>
                         <div className="profile-info-row">
                             <div className="profile-info-icon">@</div>
                             <div>

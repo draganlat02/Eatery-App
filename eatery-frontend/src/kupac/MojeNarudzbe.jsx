@@ -30,11 +30,33 @@ const MojeNarudzbe = ({ kupacId }) => {
     const ucitajNarudzbe = async () => {
         try {
             setUcitavanje(true);
-            const res = await axios.get(`http://localhost:8000/api/kupac/narudzbe/${kupacId}`);
+            setGreska('');
+
+            // Preuzimanje tokena iz localStorage-a
+            const token = localStorage.getItem('jwtToken') || localStorage.getItem('token');
+
+            if (!token) {
+                setGreska("Niste prijavljeni. Molimo prijavite se ponovo.");
+                setUcitavanje(false);
+                return;
+            }
+
+            // Poziv na port 8000 uz slanje JWT tokena
+            const res = await axios.get(`http://localhost:8000/api/kupac/narudzbe/${kupacId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             setNarudzbe(res.data);
         } catch (err) {
             console.error("Greška pri preuzimanju narudžbi:", err);
-            setGreska("Nije moguće učitati narudžbe.");
+            
+            if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                setGreska("Nemate ovlaštenje ili je sesija istekla.");
+            } else {
+                setGreska("Nije moguće učitati narudžbe.");
+            }
         } finally {
             setUcitavanje(false);
         }

@@ -6,6 +6,7 @@ function AdminPanel({ user, onLogout }) {
     const [zahtjevi, setZahtjevi] = useState([]);
     const [poruka, setPoruka] = useState('');
     const [loading, setLoading] = useState(true);
+    const [obradaId, setObradaId] = useState(null); // Prati koji se zahtjev trenutno obrađuje
 
     const ucitajZahtjeve = async () => {
         try {
@@ -27,12 +28,18 @@ function AdminPanel({ user, onLogout }) {
 
     const obradiZahtjev = async (id, odobreno) => {
         try {
+            setObradaId(id); // Blokiramo gumbe samo za ovaj redak
             const res = await API.post(`/admin/zahtjevi/${id}/obradi?odobreno=${odobreno}`);
-            setPoruka(typeof res.data === 'string' ? res.data : 'Zahtjev je obrađen.');
-            ucitajZahtjeve();
+            setPoruka(typeof res.data === 'string' ? res.data : 'Zahtjev je uspješno obrađen.');
+            
+            // Umjesto ponovnog dohvata svih podataka s mreže, odmah uklonimo obrađeni zahtjev iz lokalnog stanja
+            setZahtjevi((prev) => prev.filter((z) => z.id !== id));
         } catch (err) {
             console.error('Greška pri obradi zahtjeva:', err);
-            setPoruka('Došlo je do greške prilikom obrade zahtjeva.');
+            const porukaGreske = err.response?.data?.message || 'Došlo je do greške prilikom obrade zahtjeva.';
+            setPoruka(`Greška: ${porukaGreske}`);
+        } finally {
+            setObradaId(null);
         }
     };
 
@@ -108,16 +115,18 @@ function AdminPanel({ user, onLogout }) {
                                                 <button
                                                     className="admin-approve"
                                                     type="button"
+                                                    disabled={obradaId === z.id}
                                                     onClick={() => obradiZahtjev(z.id, true)}
                                                 >
-                                                    Odobri
+                                                    {obradaId === z.id ? 'Obrada...' : 'Odobri'}
                                                 </button>
                                                 <button
                                                     className="admin-reject"
                                                     type="button"
+                                                    disabled={obradaId === z.id}
                                                     onClick={() => obradiZahtjev(z.id, false)}
                                                 >
-                                                    Odbij
+                                                    {obradaId === z.id ? 'Obrada...' : 'Odbij'}
                                                 </button>
                                             </div>
                                         </td>

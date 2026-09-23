@@ -3,7 +3,9 @@ package com.eatery.eaterybackend.controller;
 import com.eatery.eaterybackend.dto.*;
 import com.eatery.eaterybackend.entity.*;
 import com.eatery.eaterybackend.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,16 +41,29 @@ public class RestoranController {
         this.klijentRepository = klijentRepository;
     }
 
+    // Pomoćna metoda za provjeru autentičnosti i vlasništva restorana
+    private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
+        if (authentication == null) return false;
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+        return ulogovani != null && ulogovani.getId().equals(trazeniRestoranId);
+    }
+
     // --- KATEGORIJE ---
 
+    // JAVNI ENDPOINT: Svaki posjetilac/kupac može vidjeti kategorije restorana
     @GetMapping("/{restoranId}/kategorije")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<KategorijaEntity>> getKategorije(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getKategorije(@PathVariable Long restoranId) {
         return ResponseEntity.ok(kategorijaRepository.findByRestoranId(restoranId));
     }
 
     @PostMapping("/{restoranId}/kategorije")
-    public ResponseEntity<?> dodajKategoriju(@PathVariable Long restoranId, @RequestBody KategorijaDTO dto) {
+    public ResponseEntity<?> dodajKategoriju(@PathVariable Long restoranId, @RequestBody KategorijaDTO dto, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da dodajete kategorije ovom restoranu!");
+        }
+
         KorisnikEntity restoran = korisnikRepository.findById(restoranId)
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen"));
 
@@ -61,14 +76,19 @@ public class RestoranController {
 
     // --- JELA ---
 
+    // JAVNI ENDPOINT: Svaki posjetilac/kupac može vidjeti meni (jela) restorana
     @GetMapping("/{restoranId}/jela")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<JeloEntity>> getJela(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getJela(@PathVariable Long restoranId) {
         return ResponseEntity.ok(jeloRepository.findByRestoranId(restoranId));
     }
 
     @PostMapping("/{restoranId}/jela")
-    public ResponseEntity<?> dodajJelo(@PathVariable Long restoranId, @RequestBody JeloDTO dto) {
+    public ResponseEntity<?> dodajJelo(@PathVariable Long restoranId, @RequestBody JeloDTO dto, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da dodajete jela ovom restoranu!");
+        }
+
         KorisnikEntity restoran = korisnikRepository.findById(restoranId)
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen"));
 
@@ -87,7 +107,11 @@ public class RestoranController {
 
     @GetMapping("/{restoranId}/statistika")
     @Transactional(readOnly = true)
-    public ResponseEntity<RestoranStatistikaDTO> getStatistika(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getStatistika(@PathVariable Long restoranId, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za uvid u statistiku ovog restorana!");
+        }
+
         Long prodane = narudzbaRepository.prebrojProdaneVrecicePoRestoranu(restoranId);
         Long otkazane = narudzbaRepository.prebrojOtkazaneNarudzbePoRestoranu(restoranId);
         BigDecimal kg = narudzbaRepository.kgSpaseneHranePoRestoranu(restoranId);
@@ -102,7 +126,11 @@ public class RestoranController {
     // --- NARUDŽBE ---
 
     @GetMapping("/{restoranId}/narudzbe")
-    public ResponseEntity<List<MojeNarudzbeDTO>> getNarudzbeZaRestoran(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getNarudzbeZaRestoran(@PathVariable Long restoranId, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za pregled narudžbi ovog restorana!");
+        }
+
         List<NarudzbaEntity> narudzbe = narudzbaRepository.findByRestoranId(restoranId);
 
         List<MojeNarudzbeDTO> result = narudzbe.stream().map(n -> {
@@ -131,9 +159,20 @@ public class RestoranController {
     }
 
     @PutMapping("/narudzba/{narudzbaId}/status")
-    public ResponseEntity<?> promijeniStatusNarudzbe(@PathVariable Long narudzbaId, @RequestBody String noviStatus) {
+    public ResponseEntity<?> promijeniStatusNarudzbe(@PathVariable Long narudzbaId, @RequestBody String noviStatus, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
+        }
+
         NarudzbaEntity narudzba = narudzbaRepository.findById(narudzbaId)
                 .orElseThrow(() -> new RuntimeException("Narudžba nije pronađena pod ID: " + narudzbaId));
+
+        String ulogovaniUsername = authentication.getName();
+        KorisnikEntity ulogovaniKorisnik = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
+
+        if (ulogovaniKorisnik == null || !narudzba.getRestoran().getId().equals(ulogovaniKorisnik.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da mijenjate status tuđe narudžbe!");
+        }
 
         String cistiStatus = noviStatus.replace("\"", "").trim();
         narudzba.setStatus(cistiStatus);
@@ -147,7 +186,11 @@ public class RestoranController {
 
     @GetMapping("/{restoranId}/profil")
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getProfilRestorana(@PathVariable Long restoranId) {
+    public ResponseEntity<?> getProfilRestorana(@PathVariable Long restoranId, Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za uvid u profil ovog restorana!");
+        }
+
         return klijentRepository.findById(restoranId)
                 .map(klijent -> {
                     Map<String, Object> response = new HashMap<>();
@@ -166,7 +209,12 @@ public class RestoranController {
     @PutMapping("/{restoranId}/profil")
     @Transactional
     public ResponseEntity<?> azurirajProfilRestorana(@PathVariable Long restoranId,
-                                                     @RequestBody Map<String, Object> body) {
+                                                     @RequestBody Map<String, Object> body,
+                                                     Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za izmjenu profila ovog restorana!");
+        }
+
         return klijentRepository.findById(restoranId)
                 .map(klijent -> {
                     if (body.containsKey("nazivObjekta") && body.get("nazivObjekta") != null) {
@@ -215,7 +263,12 @@ public class RestoranController {
     @PutMapping("/{restoranId}/naziv")
     @Transactional
     public ResponseEntity<?> promijeniNazivObjekta(@PathVariable Long restoranId,
-                                                   @RequestBody String noviNaziv) {
+                                                   @RequestBody String noviNaziv,
+                                                   Authentication authentication) {
+        if (!isRestoranOvlascen(restoranId, authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za izmjenu naziva ovog restorana!");
+        }
+
         String cistiNaziv = noviNaziv.replace("\"", "").trim();
 
         if (cistiNaziv.isEmpty()) {

@@ -1,14 +1,18 @@
 package com.eatery.eaterybackend.controller;
 
 import com.eatery.eaterybackend.dto.LoginRequestDTO;
+import com.eatery.eaterybackend.dto.LoginResponseDTO;
 import com.eatery.eaterybackend.dto.RegistracijaKlijentaDTO;
 import com.eatery.eaterybackend.dto.RegistracijaKupcaDTO;
 import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.ZahtjevZaAktivacijuEntity;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.ZahtjevZaAktivacijuRepository;
+import com.eatery.eaterybackend.security.JwtUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,15 +21,13 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final KorisnikRepository korisnikRepository;
     private final ZahtjevZaAktivacijuRepository zahtjevRepository;
-
-    public AuthController(KorisnikRepository korisnikRepository, ZahtjevZaAktivacijuRepository zahtjevRepository) {
-        this.korisnikRepository = korisnikRepository;
-        this.zahtjevRepository = zahtjevRepository;
-    }
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
 
     @PostMapping("/registracija/kupac")
     public ResponseEntity<?> registrujKupca(@RequestBody RegistracijaKupcaDTO dto) {
@@ -35,9 +37,9 @@ public class AuthController {
 
         KorisnikEntity korisnik = new KorisnikEntity();
         korisnik.setKorisnickoIme(dto.getKorisnickoIme());
-        korisnik.setSifra(dto.getSifra());
+        // Heširanje šifre prije čuvanja u bazu
+        korisnik.setSifra(passwordEncoder.encode(dto.getSifra()));
         korisnik.setEmail(dto.getEmail());
-        //korisnik.setIme(dto.getIme());
         korisnik.setUloga("KUPAC");
         korisnik.setAktiviran(true);
 
@@ -53,10 +55,9 @@ public class AuthController {
 
         KorisnikEntity korisnik = new KorisnikEntity();
         korisnik.setKorisnickoIme(dto.getKorisnickoIme());
-        korisnik.setSifra(dto.getSifra());
+        // Heširanje šifre prije čuvanja u bazu
+        korisnik.setSifra(passwordEncoder.encode(dto.getSifra()));
         korisnik.setEmail(dto.getEmail());
-        //korisnik.setNazivObjekta(dto.getNazivObjekta());
-        //korisnik.setOpis(dto.getOpis());
         korisnik.setUloga("KLIJENT");
         korisnik.setAktiviran(false);
 
@@ -80,7 +81,11 @@ public class AuthController {
 
         KorisnikEntity korisnik = korisnikOpt.get();
 
-        if (!korisnik.getSifra().equals(dto.getSifra())) {
+        // Podržava i heširane (BCrypt) i obične (plain-text) šifre radi kompatibilnosti sa postojećim korisnicima u bazi
+        boolean isSifraIsprvana = passwordEncoder.matches(dto.getSifra(), korisnik.getSifra())
+                || korisnik.getSifra().equals(dto.getSifra());
+
+        if (!isSifraIsprvana) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Neispravno korisničko ime ili lozinka!"));
         }
@@ -90,6 +95,22 @@ public class AuthController {
                     .body(Map.of("message", "Nalog još uvijek nije aktiviran od strane administratora!"));
         }
 
-        return ResponseEntity.ok(korisnik);
+        // Generisanje JWT tokena
+        String token = jwtUtils.generateToken(
+                korisnik.getKorisnickoIme(),
+                korisnik.getUloga(),
+                korisnik.getId()
+        );
+
+        // Vraćamo DTO koji sadrži i token i osnove korisničke podatke
+        LoginResponseDTO response = new LoginResponseDTO(
+                token,
+                korisnik.getId(),
+                korisnik.getKorisnickoIme(),
+                korisnik.getUloga(),
+                null // Proširi ako KorisnikEntity ima getNazivObjekta()
+        );
+
+        return ResponseEntity.ok(response);
     }
 }

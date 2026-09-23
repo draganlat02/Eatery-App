@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./RestoranPanel.css";
-import UnosAdreseRestorana from './UnosAdreseRestorana';
 import KlijentProfil from './KlijentProfil';
+import API from '../api';
 
 const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
@@ -103,9 +103,8 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
             setLoading(true);
 
-            const res = await axios.get(
-                `http://localhost:8000/api/vrecice/restoran/${stvarniRestoranId}`
-            );
+            const res = await API.get(`/vrecice/restoran/${stvarniRestoranId}`);
+            
 
             setVrecice(res.data);
 
@@ -135,9 +134,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
             setLoadingNarudzbe(true);
 
-            const res = await axios.get(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/narudzbe`
-            );
+            const res = await API.get(`/restoran/${stvarniRestoranId}/narudzbe`);
 
             setNarudzbe(res.data);
 
@@ -160,10 +157,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
         if (!stvarniRestoranId) return;
 
         try {
-
-            const res = await axios.get(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/statistika`
-            );
+const res = await API.get(`/restoran/${stvarniRestoranId}/statistika`);
 
             setStatistika({
                 brojProdanihVrecica:
@@ -194,11 +188,9 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            const resKat = await axios.get(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/kategorije`
-            );
+            const resKat = await API.get(`/restoran/${stvarniRestoranId}/kategorije`);
 
-            setKategorije(resKat.data);
+setKategorije(resKat.data);
 
             if (resKat.data.length > 0) {
 
@@ -209,11 +201,9 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
             }
 
 
-            const resJela = await axios.get(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/jela`
-            );
+           const resJela = await API.get(`/restoran/${stvarniRestoranId}/jela`);
 
-            setJela(resJela.data);
+setJela(resJela.data);
 
         } catch (err) {
 
@@ -294,12 +284,9 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.post(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/kategorije`,
-                {
-                    naziv: novaKategorija
-                }
-            );
+            await API.post(`/restoran/${stvarniRestoranId}/kategorije`, {
+    naziv: novaKategorija
+});
 
             alert("Kategorija uspešno dodata!");
 
@@ -342,19 +329,12 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.post(
-                `http://localhost:8000/api/restoran/${stvarniRestoranId}/jela`,
-                {
-                    naziv: novoJelo.naziv,
-                    opis: novoJelo.opis,
-                    cijena: parseFloat(novoJelo.cijena),
-                    kategorijaId:
-                        parseInt(
-                            novoJelo.kategorijaId,
-                            10
-                        )
-                }
-            );
+           await API.post(`/restoran/${stvarniRestoranId}/jela`, {
+    naziv: novoJelo.naziv,
+    opis: novoJelo.opis,
+    cijena: parseFloat(novoJelo.cijena),
+    kategorijaId: parseInt(novoJelo.kategorijaId, 10)
+});
 
             alert("Jelo uspešno dodato na meni!");
 
@@ -475,10 +455,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.post(
-                `http://localhost:8000/api/vrecice/restoran/${stvarniRestoranId}`,
-                payload
-            );
+            await API.post(`/vrecice/restoran/${stvarniRestoranId}`, payload);
 
             alert(
                 "🎉 Vrećica iznenađenja je uspešno kreirana!"
@@ -513,10 +490,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.put(
-                `http://localhost:8000/api/vrecice/${vrecicaId}/status?aktivna=${!trenutniStatus}`
-            );
-
+          await API.put(`/vrecice/${vrecicaId}/status?aktivna=${!trenutniStatus}`);
             ucitajVrecice();
 
         } catch (err) {
@@ -542,9 +516,7 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.put(
-                `http://localhost:8000/api/vrecice/${vrecicaId}/kolicina?kolicina=${novaKolicina}`
-            );
+           await API.put(`/vrecice/${vrecicaId}/kolicina?kolicina=${novaKolicina}`);
 
             ucitajVrecice();
 
@@ -569,16 +541,15 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
         try {
 
-            await axios.put(
-                `http://localhost:8000/api/restoran/narudzba/${narudzbaId}/status`,
-                noviStatus,
-                {
-                    headers: {
-                        "Content-Type":
-                            "text/plain"
-                    }
-                }
-            );
+          await API.put(
+    `/restoran/narudzba/${narudzbaId}/status`,
+    noviStatus,
+    {
+        headers: {
+            "Content-Type": "text/plain"
+        }
+    }
+);
 
             ucitajNarudzbe();
             ucitajStatistiku();
