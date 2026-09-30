@@ -1,6 +1,5 @@
 package com.eatery.eaterybackend.config;
 
-import com.eatery.eaterybackend.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.eatery.eaterybackend.security.JwtAuthenticationFilter;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -22,24 +23,25 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configure(http)) // Omogućava CORS
+                .cors(cors -> cors.configure(http))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Javne rute za prijavu i registraciju
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // JAVNE RUTE: Dozvoli svima da gledaju jela i kategorije restorana (samo GET metode)
                         .requestMatchers(HttpMethod.GET, "/api/restoran/*/jela").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/restoran/*/kategorije").permitAll()
 
-                        // Sve ostale rute traže validan JWT token
+                        .requestMatchers("/ws/**").permitAll()
+
                         .anyRequest().authenticated()
                 );
 
