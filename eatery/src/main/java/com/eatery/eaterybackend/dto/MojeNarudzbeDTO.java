@@ -1,9 +1,10 @@
 package com.eatery.eaterybackend.dto;
 
-import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import lombok.Data;
 
 @Data
 public class MojeNarudzbeDTO {
@@ -15,6 +16,8 @@ public class MojeNarudzbeDTO {
     private LocalDateTime vrijemeKreiranja;
     private String restoranNaziv;
     private List<StavkaPregledDTO> stavke;
+
+    private String pin;
 
     @Data
     public static class StavkaPregledDTO {
