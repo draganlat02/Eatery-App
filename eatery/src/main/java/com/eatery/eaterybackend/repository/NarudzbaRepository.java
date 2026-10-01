@@ -1,13 +1,14 @@
 package com.eatery.eaterybackend.repository;
 
-import com.eatery.eaterybackend.entity.NarudzbaEntity;
+import java.math.BigDecimal;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
-import java.util.List;
+import com.eatery.eaterybackend.entity.NarudzbaEntity;
 
 @Repository
 public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> {
@@ -16,7 +17,10 @@ public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> 
 
     List<NarudzbaEntity> findByRestoranId(Long restoranId);
 
-    // 1. Prebrojavanje ukupnog broja vrećica (zbir kolone 'kolicina' u stavkama)
+    List<NarudzbaEntity> findByKupacIdOrderByIdDesc(Long kupacId);
+
+    List<NarudzbaEntity> findByRestoranIdOrderByIdDesc(Long restoranId);
+
     @Query(value = "SELECT COALESCE(SUM(sn.kolicina), 0) " +
             "FROM stavka_narudzbe sn " +
             "WHERE sn.id_narudzbe IN (" +
@@ -27,7 +31,6 @@ public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> 
             nativeQuery = true)
     Long prebrojVrecicePoKupcu(@Param("kupacId") Long kupacId);
 
-    // 2. Izračunavanje ukupne uštede u KM za sve preuzete/dostavljene narudžbe
     @Query(value = "SELECT COALESCE(SUM((COALESCE(vi.originalna_cijena, 0) - COALESCE(vi.akcijska_cijena, 0)) * sn.kolicina), 0) " +
             "FROM stavka_narudzbe sn " +
             "JOIN vrecica_iznenadjenja vi ON sn.id_jela = vi.id_vrecice " +
