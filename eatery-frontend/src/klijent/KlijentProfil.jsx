@@ -19,11 +19,16 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Pomoćna provera: da li imamo ISPRAVNE koordinate (null/undefined/0 sve znače "nije uneseno")
+function jeValidnaKoordinata(vrijednost) {
+    return vrijednost !== null && vrijednost !== undefined && vrijednost !== 0;
+}
+
 // Pomoćna komponenta za re-centriranje mape kada se koordinate promijene
 function CentrirajMapu({ lat, lng }) {
     const map = useMap();
     useEffect(() => {
-        if (lat !== 0 && lng !== 0) {
+        if (jeValidnaKoordinata(lat) && jeValidnaKoordinata(lng)) {
             map.setView([lat, lng], 16);
         }
     }, [lat, lng, map]);
@@ -238,7 +243,7 @@ const KlijentProfil = () => {
         return <div className="klijent-profil-loading">Učitavanje profila...</div>;
     }
 
-    const mapCenter = (profil.lat !== 0 && profil.lng !== 0)
+    const mapCenter = (jeValidnaKoordinata(profil.lat) && jeValidnaKoordinata(profil.lng))
         ? [profil.lat, profil.lng]
         : [44.77218, 17.19100];
 
@@ -315,7 +320,7 @@ const KlijentProfil = () => {
                         Kupci će vidjeti ovo radno vrijeme i da li je restoran trenutno otvoren.
                     </p>
 
-                    {profil.lat !== 0 && profil.lng !== 0 && (
+                    {jeValidnaKoordinata(profil.lat) && jeValidnaKoordinata(profil.lng) && (
                         <p className="klijent-profil-hint">
                             Koordinate: {profil.lat.toFixed(6)}, {profil.lng.toFixed(6)}
                         </p>
@@ -341,11 +346,14 @@ const KlijentProfil = () => {
                         <CentrirajMapu lat={profil.lat} lng={profil.lng} />
                         <KlikNaMapuHandler onSelectCoordinates={handleMapClick} />
 
-                        {(profil.lat !== 0 || profil.lng !== 0) && (
+                        {(jeValidnaKoordinata(profil.lat) || jeValidnaKoordinata(profil.lng)) && (
                             <Marker
                                 draggable={true}
                                 eventHandlers={eventHandlers}
-                                position={[profil.lat !== 0 ? profil.lat : 44.77218, profil.lng !== 0 ? profil.lng : 17.19100]}
+                                position={[
+                                    jeValidnaKoordinata(profil.lat) ? profil.lat : 44.77218,
+                                    jeValidnaKoordinata(profil.lng) ? profil.lng : 17.19100
+                                ]}
                                 ref={markerRef}
                             >
                                 <Popup>
