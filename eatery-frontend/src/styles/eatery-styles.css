@@ -1,0 +1,148 @@
+.eatery-notifikacija {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 340px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--primary, #0f766e);
+    border-left: 5px solid var(--primary, #0f766e);
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: eateryNotifSlideIn 0.25s ease-out;
+}
+
+.eatery-notifikacija-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.eatery-notifikacija-tekst strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text, #17201f);
+}
+
+.eatery-notifikacija-tekst span {
+    font-size: 13px;
+    color: var(--text-secondary, #687573);
+}
+
+.eatery-notifikacija-close {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-light, #94a09e);
+}
+
+@keyframes eateryNotifSlideIn {
+    from { transform: translateY(-12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.eatery-pin-prikaz {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--primary-light, #e7f5f3);
+    border: 1px dashed var(--primary, #0f766e);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.eatery-pin-prikaz strong {
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: var(--primary-dark, #115e59);
+}
+
+.eatery-pin-prikaz span {
+    font-size: 12px;
+    color: var(--text-secondary, #687573);
+}
+
+.eatery-pin-unos {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.eatery-pin-unos input {
+    width: 90px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #e5e9e8);
+    letter-spacing: 3px;
+    font-size: 15px;
+    text-align: center;
+}
+
+.eatery-pin-unos button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary, #0f766e);
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.eatery-pin-unos button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.eatery-pin-poruka {
+    width: 100%;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.eatery-pin-poruka.ok { color: #16794f; }
+.eatery-pin-poruka.err { color: var(--danger, #dc5a5a); }
+
+.eatery-kategorija-grupa {
+    margin-bottom: 22px;
+}
+
+.eatery-kategorija-naslov {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text, #17201f);
+}
+
+.eatery-kategorija-naslov span.broj {
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--text-secondary, #687573);
+    background: var(--surface-soft, #f3f6f5);
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.eatery-zatvoreno-upozorenje {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: #fdecec;
+    border: 1px solid var(--danger, #dc5a5a);
+    border-radius: 10px;
+    color: #8a2f2f;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
