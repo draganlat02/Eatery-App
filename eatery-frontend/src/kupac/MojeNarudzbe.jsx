@@ -10,6 +10,7 @@ const statusMap = {
     U_PRIPREMI: { className: 'preparing', label: 'U pripremi' },
     SPREMNO: { className: 'ready', label: 'Spremno' },
     DOSTAVLJENO: { className: 'delivered', label: 'Dostavljeno' },
+    PREUZETO: { className: 'delivered', label: 'Preuzeto' },
     ODBIJENA: { className: 'rejected', label: 'Odbijeno' },
     OTKAZANA: { className: 'rejected', label: 'Otkazano' },
     OTKAZANO: { className: 'rejected', label: 'Otkazano' },
@@ -32,7 +33,6 @@ const MojeNarudzbe = ({ kupacId }) => {
             setUcitavanje(true);
             setGreska('');
 
-            // Preuzimanje tokena iz localStorage-a
             const token = localStorage.getItem('jwtToken') || localStorage.getItem('token');
 
             if (!token) {
@@ -41,7 +41,6 @@ const MojeNarudzbe = ({ kupacId }) => {
                 return;
             }
 
-            // Poziv na port 8000 uz slanje JWT tokena
             const res = await axios.get(`http://localhost:8000/api/kupac/narudzbe/${kupacId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -118,6 +117,19 @@ const MojeNarudzbe = ({ kupacId }) => {
                                     </li>
                                 ))}
                             </ul>
+
+                            {n.pin &&
+                                n.status !== 'PREUZETO' &&
+                                n.status !== 'OTKAZANA' &&
+                                n.status !== 'OTKAZANO' &&
+                                n.status !== 'ODBIJENA' && (
+                                <div className="eatery-pin-prikaz">
+                                    <div>
+                                        <strong>{n.pin}</strong>
+                                        <span>PIN za preuzimanje — pokažite ga restoranu</span>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="customer-order-footer">
                                 <span>{n.adresaDostave || 'Preuzimanje u restoranu'}</span>
