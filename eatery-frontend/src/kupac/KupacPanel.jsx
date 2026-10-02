@@ -1,12 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import MojeNarudzbe from './MojeNarudzbe';
 import KupacProfil from './KupacProfil';
 import HeroVrecice from './HeroVrecice';
 import './KupacPanel.css';
+import '../styles/eatery-styles.css';
 import KupacMapa from './KupacMapa';
 import { formatRadnoVrijeme, statusRadnogVremena } from './radnoVrijeme';
+import { pretplatiSeNaTopic, odsviraliObavjestenje } from '../ws';
 
 function KupacPanel({ user, onLogout, onUserUpdate }) {
 
@@ -18,14 +19,12 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     const [poruka, setPoruka] = useState('');
     const [osveziNarudzbe, setOsveziNarudzbe] = useState(0);
 
-    // RESTORANI / NARUDZBE / PROFIL
+    const [notifikacija, setNotifikacija] = useState(null);
+
+    const [poslednjiPin, setPoslednjiPin] = useState(null);
+
     const [aktivnaStranica, setAktivnaStranica] =
         useState('restorani');
-
-
-    /* =========================================================
-       UČITAVANJE RESTORANA
-       ========================================================= */
 
     useEffect(() => {
 
@@ -40,10 +39,38 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
     }, []);
 
+    useEffect(() => {
 
-    /* =========================================================
-       IZBOR RESTORANA
-       ========================================================= */
+        const kupacId = user?.id || user?.idKorisnika;
+        if (!kupacId) return;
+
+        const client = pretplatiSeNaTopic(
+            `/topic/kupac/${kupacId}`,
+            (poruka) => {
+                if (poruka?.tip === 'STATUS_PROMIJENJEN') {
+                    odsviraliObavjestenje();
+
+                    setNotifikacija({
+                        naslov: '📦 Status narudžbe promijenjen',
+                        tekst: `Narudžba ${poruka.sifra || ''} — novi status: ${poruka.noviStatus}`
+                    });
+
+                    setOsveziNarudzbe(prev => prev + 1);
+                }
+            }
+        );
+
+        return () => {
+            client.deactivate();
+        };
+
+    }, [user]);
+
+    useEffect(() => {
+        if (!notifikacija) return;
+        const timer = setTimeout(() => setNotifikacija(null), 6000);
+        return () => clearTimeout(timer);
+    }, [notifikacija]);
 
     const izaberiRestoran = async (restoran) => {
 
@@ -69,11 +96,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
         }
     };
-
-
-    /* =========================================================
-       KORPA
-       ========================================================= */
 
     const dodajUKorpu = (jelo) => {
 
@@ -158,11 +180,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
         );
     };
 
-
-    /* =========================================================
-       VRECICE
-       ========================================================= */
-
     const rukujDodavanjemVrecice = (vrecica) => {
 
         console.log(
@@ -213,11 +230,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
         }, 3000);
     };
 
-
-    /* =========================================================
-       CIJENA KORPE
-       ========================================================= */
-
     const ukupnaCijenaKorpe =
         korpa.reduce(
             (sum, item) =>
@@ -235,11 +247,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
             0
         );
 
-
-    /* =========================================================
-       NARUDŽBA
-       ========================================================= */
-
     const posaljiNarudzbu = async (e) => {
 
         if (e) {
@@ -250,6 +257,13 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
             return alert(
                 'Vaša korpa je prazna!'
+            );
+        }
+
+        if (restoranZatvoren) {
+
+            return alert(
+                'Restoran je trenutno zatvoren. Narudžbe su moguće samo u radno vrijeme.'
             );
         }
 
@@ -372,13 +386,20 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
         try {
 
-            await API.post(
+            const odgovor = await API.post(
                 '/narudzbe',
                 dto
             );
 
+            const noviPin = odgovor.data?.pin;
+            if (noviPin) {
+                setPoslednjiPin(noviPin);
+            }
+
             alert(
-                '🎉 Narudžba je uspešno poslata!'
+                noviPin
+                    ? `🎉 Narudžba je uspešno poslata! Vaš PIN za preuzimanje je ${noviPin} — sačuvajte ga, potreban je prilikom preuzimanja.`
+                    : '🎉 Narudžba je uspešno poslata!'
             );
 
             setKorpa([]);
@@ -406,11 +427,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
         }
     };
 
-
-    /* =========================================================
-       NAZIV RESTORANA
-       ========================================================= */
-
     const nazivRestorana =
         izabraniRestoran?.nazivObjekta ||
         izabraniRestoran?.korisnickoIme;
@@ -420,10 +436,27 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
         izabraniRestoran?.radnoVrijemeDo
     );
 
+    const grupisanaJela = (() => {
+        const mapa = new Map();
 
-    /* =========================================================
-       NAVIGACIJA
-       ========================================================= */
+        jela.forEach(j => {
+            const kljuc = j.kategorija?.id ?? 'bez-kategorije';
+            const naziv = j.kategorija?.naziv || 'Ostalo';
+
+            if (!mapa.has(kljuc)) {
+                mapa.set(kljuc, { kljuc, naziv, jela: [] });
+            }
+            mapa.get(kljuc).jela.push(j);
+        });
+
+        return Array.from(mapa.values()).sort((a, b) => {
+            if (a.kljuc === 'bez-kategorije') return 1;
+            if (b.kljuc === 'bez-kategorije') return -1;
+            return a.naziv.localeCompare(b.naziv);
+        });
+    })();
+
+    const restoranZatvoren = statusIzabranog.open === false;
 
     const idiNaRestorane = () => {
 
@@ -505,15 +538,26 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     return (
         <div className="kupac-page">
 
-            {/* =================================================
-               NAVBAR
-               ================================================= */}
+            {notifikacija && (
+                <div className="eatery-notifikacija" role="alert">
+                    <span className="eatery-notifikacija-icon">📦</span>
+                    <div className="eatery-notifikacija-tekst">
+                        <strong>{notifikacija.naslov}</strong>
+                        <span>{notifikacija.tekst}</span>
+                    </div>
+                    <button
+                        type="button"
+                        className="eatery-notifikacija-close"
+                        onClick={() => setNotifikacija(null)}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             <header className="kupac-navbar">
 
                 <div className="kupac-navbar-inner">
-
-                    {/* BRAND */}
 
                     <div
                         className="brand"
@@ -537,9 +581,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                         </div>
 
                     </div>
-
-
-                    {/* NAVIGATION */}
 
                     <nav className="main-nav">
 
@@ -592,9 +633,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                     </nav>
 
-
-                    {/* CART */}
-
                     <div className="navbar-actions">
                         <button
                             className="navbar-cart"
@@ -627,17 +665,7 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
             </header>
 
-
-            {/* =================================================
-               MAIN
-               ================================================= */}
-
             <main className="kupac-content">
-
-
-                {/* =================================================
-                   PROFIL
-                   ================================================= */}
 
                 {aktivnaStranica === 'profil' && (
 
@@ -648,11 +676,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                     />
 
                 )}
-
-
-                {/* =================================================
-                   NARUDŽBE
-                   ================================================= */}
 
                 {aktivnaStranica === 'narudzbe' && (
 
@@ -701,16 +724,9 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                 )}
 
-
-                {/* =================================================
-                   RESTORANI
-                   ================================================= */}
-
                 {aktivnaStranica === 'restorani' && (
 
                     <>
-
-                        {/* ================= WELCOME ================= */}
 
                         {!izabraniRestoran && (
 
@@ -781,9 +797,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                         )}
 
-
-                        {/* ================= VRECICE ================= */}
-
                         {!izabraniRestoran && (
 
                             <section className="hero-vrecice-wrapper">
@@ -797,9 +810,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                             </section>
 
                         )}
-                        {/* ================= MAPA RESTORANA ================= */}
-
-{/* ================= MAPA RESTORANA ================= */}
 
 {!izabraniRestoran && (
 
@@ -834,9 +844,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
 )}
 
-
-                        {/* ================= PORUKA ================= */}
-
                         {poruka && (
 
                             <div className="success-message">
@@ -860,11 +867,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                             </div>
 
                         )}
-
-
-                        {/* =================================================
-                           LISTA RESTORANA
-                           ================================================= */}
 
                         {!izabraniRestoran ? (
 
@@ -1019,10 +1021,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                         ) : (
 
-                            /* =================================================
-                               RESTORAN + MENI
-                               ================================================= */
-
                             <section
                                 className="menu-layout-section"
                                 id="meni"
@@ -1093,9 +1091,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                 <div className="menu-content">
 
-
-                                    {/* ================= JELA ================= */}
-
                                     <div className="food-list">
 
                                         <div className="food-list-heading">
@@ -1115,6 +1110,14 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                         </div>
 
+
+                                        {restoranZatvoren && (
+                                            <div className="eatery-zatvoreno-upozorenje">
+                                                🔒 Restoran je trenutno zatvoren
+                                                {statusIzabranog.hours ? ` (radno vrijeme: ${statusIzabranog.hours})` : ''}.
+                                                Naručivanje trenutno nije moguće.
+                                            </div>
+                                        )}
 
                                         {jela.length === 0 ? (
 
@@ -1137,9 +1140,19 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                         ) : (
 
-                                            <div className="food-items">
+                                            <div className="menu-grouped">
 
-                                                {jela.map(j => (
+                                                {grupisanaJela.map(grupa => (
+                                                <div className="eatery-kategorija-grupa" key={grupa.kljuc}>
+
+                                                    <div className="eatery-kategorija-naslov">
+                                                        {grupa.naziv}
+                                                        <span className="broj">{grupa.jela.length}</span>
+                                                    </div>
+
+                                                    <div className="food-items">
+
+                                                {grupa.jela.map(j => (
 
                                                     <article
                                                         className="food-card"
@@ -1197,14 +1210,16 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                                 ))}
 
+                                                    </div>
+
+                                                </div>
+                                                ))}
+
                                             </div>
 
                                         )}
 
                                     </div>
-
-
-                                    {/* ================= KORPA ================= */}
 
                                     <aside
                                         className="cart-card"
@@ -1410,9 +1425,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                                 </div>
 
-
-                                                {/* SUMMARY */}
-
                                                 <div className="cart-summary">
 
                                                     <div className="summary-line">
@@ -1467,8 +1479,14 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
                                                 </div>
 
-
-                                                {/* ORDER FORM */}
+                                                {poslednjiPin && (
+                                                    <div className="eatery-pin-prikaz">
+                                                        <div>
+                                                            <strong>{poslednjiPin}</strong>
+                                                            <span>PIN vaše posljednje narudžbe — pokažite ga prilikom preuzimanja</span>
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 <form
                                                     className="order-form"
@@ -1498,9 +1516,16 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                                     />
 
 
+                                                    {restoranZatvoren && (
+                                                        <div className="eatery-zatvoreno-upozorenje">
+                                                            🔒 Restoran je trenutno zatvoren — narudžba nije moguća.
+                                                        </div>
+                                                    )}
+
                                                     <button
                                                         type="submit"
                                                         className="order-button"
+                                                        disabled={restoranZatvoren}
                                                     >
 
                                                         Potvrdi i naruči
@@ -1535,11 +1560,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                 )}
 
             </main>
-
-
-            {/* =================================================
-               FOOTER
-               ================================================= */}
 
             <footer className="kupac-footer">
 
