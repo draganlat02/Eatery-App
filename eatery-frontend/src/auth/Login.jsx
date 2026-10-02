@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import API from '../api';
 import './Login.css';
 
-function Login({ onLoginSuccess, onSwitchToRegister }) {
+function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToRegisterKlijent }) {
+    
     const [korisnickoIme, setKorisnickoIme] = useState('');
     const [sifra, setSifra] = useState('');
     const [poruka, setPoruka] = useState('');
@@ -12,34 +13,43 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
    
     
 const handleLogin = async (e) => {
+
     e.preventDefault();
     setGreska(false);
     setPoruka('Prijava u toku...');
     setUcitavanje(true);
+
     try {
+
         const res = await API.post('/auth/login', { korisnickoIme, sifra });
 
-        // 1. Sačuvaj token za Axios interceptor / API pozive
         if (res.data.token) {
+
             localStorage.setItem('token', res.data.token);
         }
 
-        // 2. Sačuvaj korisničke podatke (id, uloga, korisnickoIme...)
         localStorage.setItem('user', JSON.stringify(res.data));
 
         if (onLoginSuccess) {
+
             onLoginSuccess(res.data);
         }
     } catch (err) {
+
         setGreska(true);
+
         if (err.response) {
+
             setPoruka(err.response.data?.message || `Greška na serveru: Status ${err.response.status}`);
         } else if (err.request) {
+
             setPoruka('Backend server nije dostupan.');
         } else {
+
             setPoruka('Došlo je do greške: ' + err.message);
         }
     } finally {
+
         setUcitavanje(false);
     }
 };
@@ -94,6 +104,7 @@ const handleLogin = async (e) => {
                         {ucitavanje ? 'Prijava...' : 'Prijavi se'}
                     </button>
                     {poruka && (
+
                         <p className={`login-message ${greska ? 'error' : 'pending'}`}>
                             {poruka}
                         </p>
@@ -101,10 +112,21 @@ const handleLogin = async (e) => {
                 </form>
 
                 {onSwitchToRegister && (
+
                     <div className="login-register">
                         <p>Nemate nalog?</p>
                         <button type="button" onClick={onSwitchToRegister}>
                             Registrujte se kao kupac
+                        </button>
+                    </div>
+                )}
+
+                {onSwitchToRegisterKlijent && (
+
+                    <div className="login-register">
+                        <p>Imate restoran?</p>
+                        <button type="button" onClick={onSwitchToRegisterKlijent}>
+                            Pošaljite zahtjev da postanete naš partner
                         </button>
                     </div>
                 )}
