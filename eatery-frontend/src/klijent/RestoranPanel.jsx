@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./RestoranPanel.css";
+import "../styles/eatery-styles.css";
 import KlijentProfil from './KlijentProfil';
 import API from '../api';
+import { pretplatiSeNaTopic, odsviraliObavjestenje } from '../ws';
 
 const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
@@ -44,6 +46,15 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
         cijena: "",
         kategorijaId: ""
     });
+
+    // =========================================================
+    // NOTIFIKACIJE (FEATURE 2) I PIN POTVRDA PREUZIMANJA (FEATURE 1)
+    // =========================================================
+
+    const [notifikacija, setNotifikacija] = useState(null); // { naslov, tekst }
+    const [pinUnosi, setPinUnosi] = useState({}); // { [narudzbaId]: "1234" }
+    const [pinObrada, setPinObrada] = useState(null); // narudzbaId koji se trenutno obrađuje
+    const [pinPoruke, setPinPoruke] = useState({}); // { [narudzbaId]: { tip: 'ok'|'err', tekst } }
 
 
     // =========================================================
@@ -249,6 +260,46 @@ setJela(resJela.data);
         return () => clearInterval(intervalId);
 
     }, [stvarniRestoranId]);
+
+
+    // =========================================================
+    // FEATURE 2: WEBSOCKET - OBAVJEŠTENJE O NOVOJ NARUDŽBI
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!stvarniRestoranId) return;
+
+        const client = pretplatiSeNaTopic(
+            `/topic/restoran/${stvarniRestoranId}`,
+            (poruka) => {
+                if (poruka?.tip === "NOVA_NARUDZBA") {
+                    odsviraliObavjestenje();
+
+                    setNotifikacija({
+                        naslov: "🔔 Nova narudžba!",
+                        tekst: `Narudžba ${poruka.sifra || ""} — ${Number(poruka.ukupnaCijena || 0).toFixed(2)} KM`
+                    });
+
+                    ucitajNarudzbe();
+                    ucitajStatistiku();
+                }
+            }
+        );
+
+        return () => {
+            client.deactivate();
+        };
+
+    }, [stvarniRestoranId]);
+
+
+    // Automatsko sklanjanje notifikacije nakon 6 sekundi
+    useEffect(() => {
+        if (!notifikacija) return;
+        const timer = setTimeout(() => setNotifikacija(null), 6000);
+        return () => clearTimeout(timer);
+    }, [notifikacija]);
 
 
     // =========================================================
@@ -565,6 +616,55 @@ setJela(resJela.data);
 
 
     // =========================================================
+    // FEATURE 1: POTVRDA PREUZIMANJA PIN-OM
+    // =========================================================
+
+    const promijeniPinUnos = (narudzbaId, vrijednost) => {
+        const samoCifre = vrijednost.replace(/\D/g, "").slice(0, 4);
+        setPinUnosi((prev) => ({ ...prev, [narudzbaId]: samoCifre }));
+    };
+
+    const potvrdiPreuzimanje = async (narudzbaId) => {
+        const pin = (pinUnosi[narudzbaId] || "").trim();
+
+        if (pin.length !== 4) {
+            setPinPoruke((prev) => ({
+                ...prev,
+                [narudzbaId]: { tip: "err", tekst: "Unesite sve 4 cifre PIN-a." }
+            }));
+            return;
+        }
+
+        try {
+            setPinObrada(narudzbaId);
+
+            await API.put(`/restoran/narudzba/${narudzbaId}/preuzimanje?pin=${pin}`);
+
+            setPinPoruke((prev) => ({
+                ...prev,
+                [narudzbaId]: { tip: "ok", tekst: "Preuzimanje potvrđeno!" }
+            }));
+
+            setPinUnosi((prev) => ({ ...prev, [narudzbaId]: "" }));
+
+            ucitajNarudzbe();
+            ucitajStatistiku();
+        } catch (err) {
+            console.error("Greška pri potvrdi preuzimanja:", err);
+
+            const poruka =
+                err.response?.data?.message ||
+                (typeof err.response?.data === "string" ? err.response.data : null) ||
+                "Neispravan PIN ili greška servera.";
+
+            setPinPoruke((prev) => ({ ...prev, [narudzbaId]: { tip: "err", tekst: poruka } }));
+        } finally {
+            setPinObrada(null);
+        }
+    };
+
+
+    // =========================================================
     // BROJ NOVIH NARUDŽBI
     // =========================================================
 
@@ -606,12 +706,54 @@ setJela(resJela.data);
 
 
     // =========================================================
+    // FEATURE 5: MENI GRUPISAN PO KATEGORIJAMA
+    // =========================================================
+
+    const grupisanaJela = (() => {
+        const mapa = new Map();
+
+        jela.forEach(j => {
+            const kljuc = j.kategorija?.id ?? "bez-kategorije";
+            const naziv = j.kategorija?.naziv || "Bez kategorije";
+
+            if (!mapa.has(kljuc)) {
+                mapa.set(kljuc, { kljuc, naziv, jela: [] });
+            }
+            mapa.get(kljuc).jela.push(j);
+        });
+
+        return Array.from(mapa.values()).sort((a, b) => {
+            if (a.kljuc === "bez-kategorije") return 1;
+            if (b.kljuc === "bez-kategorije") return -1;
+            return a.naziv.localeCompare(b.naziv);
+        });
+    })();
+
+
+    // =========================================================
     // RENDER
     // =========================================================
 
     return (
 
         <div className="restoran-page">
+
+            {notifikacija && (
+                <div className="eatery-notifikacija" role="alert">
+                    <span className="eatery-notifikacija-icon">🔔</span>
+                    <div className="eatery-notifikacija-tekst">
+                        <strong>{notifikacija.naslov}</strong>
+                        <span>{notifikacija.tekst}</span>
+                    </div>
+                    <button
+                        type="button"
+                        className="eatery-notifikacija-close"
+                        onClick={() => setNotifikacija(null)}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
 
             {/* =================================================
@@ -1233,6 +1375,48 @@ setJela(resJela.data);
                                         </div>
 
 
+                                        {n.status !== "PREUZETO" &&
+                                            n.status !== "OTKAZANA" &&
+                                            n.status !== "OTKAZANO" &&
+                                            n.status !== "ODBIJENA" && (
+                                            <div className="eatery-pin-unos">
+                                                <span className="action-label">
+                                                    🔐 PIN za preuzimanje:
+                                                </span>
+
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength={4}
+                                                    placeholder="0000"
+                                                    value={pinUnosi[n.id] || ""}
+                                                    onChange={(e) =>
+                                                        promijeniPinUnos(n.id, e.target.value)
+                                                    }
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") potvrdiPreuzimanje(n.id);
+                                                    }}
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    disabled={pinObrada === n.id}
+                                                    onClick={() => potvrdiPreuzimanje(n.id)}
+                                                >
+                                                    {pinObrada === n.id
+                                                        ? "Provjera..."
+                                                        : "Potvrdi preuzimanje"}
+                                                </button>
+
+                                                {pinPoruke[n.id] && (
+                                                    <div className={`eatery-pin-poruka ${pinPoruke[n.id].tip}`}>
+                                                        {pinPoruke[n.id].tekst}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+
                                         <div className="order-card-actions">
 
                                             <span className="action-label">
@@ -1723,9 +1907,19 @@ setJela(resJela.data);
 
                         ) : (
 
-                            <div className="menu-items-grid">
+                            <div className="menu-grouped">
 
-                                {jela.map(jelo => (
+                                {grupisanaJela.map(grupa => (
+                                <div className="eatery-kategorija-grupa" key={grupa.kljuc}>
+
+                                    <div className="eatery-kategorija-naslov">
+                                        {grupa.naziv}
+                                        <span className="broj">{grupa.jela.length}</span>
+                                    </div>
+
+                                    <div className="menu-items-grid">
+
+                                {grupa.jela.map(jelo => (
 
                                     <article
                                         className="menu-item-card"
@@ -1766,6 +1960,11 @@ setJela(resJela.data);
 
                                     </article>
 
+                                ))}
+
+                                    </div>
+
+                                </div>
                                 ))}
 
                             </div>
