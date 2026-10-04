@@ -18,12 +18,14 @@ import com.eatery.eaterybackend.dto.RegistracijaKlijentaDTO;
 import com.eatery.eaterybackend.dto.RegistracijaKupcaDTO;
 import com.eatery.eaterybackend.entity.KlijentEntity;
 import com.eatery.eaterybackend.entity.KorisnikEntity;
+import com.eatery.eaterybackend.entity.KupacEntity;
 import com.eatery.eaterybackend.entity.OpisEntity;
 import com.eatery.eaterybackend.entity.ZahtjevZaAktivacijuEntity;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.OpisRepository;
 import com.eatery.eaterybackend.repository.ZahtjevZaAktivacijuRepository;
 import com.eatery.eaterybackend.security.JwtUtils;
+import com.eatery.eaterybackend.util.SuspenzijaUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,20 +45,30 @@ public class AuthController {
     public ResponseEntity<?> registrujKupca(@RequestBody RegistracijaKupcaDTO dto) {
 
         if (korisnikRepository.findByKorisnickoIme(dto.getKorisnickoIme()).isPresent()) {
-
             return ResponseEntity.badRequest().body(Map.of("message", "Korisničko ime je već zauzeto!"));
         }
 
-        KorisnikEntity korisnik = new KorisnikEntity();
-        korisnik.setKorisnickoIme(dto.getKorisnickoIme());
-        korisnik.setSifra(passwordEncoder.encode(dto.getSifra()));
-        korisnik.setEmail(dto.getEmail());
-        korisnik.setUloga("KUPAC");
-        korisnik.setAktiviran(true);
+        if (dto.getEmail() != null && korisnikRepository.existsByEmail(dto.getEmail())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email je već zauzet!"));
+        }
 
-        korisnikRepository.save(korisnik);
+        if (dto.getIme() == null || dto.getIme().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Ime je obavezno!"));
+        }
 
-        return ResponseEntity.ok(korisnik);
+        KupacEntity kupac = new KupacEntity();
+        kupac.setKorisnickoIme(dto.getKorisnickoIme());
+        kupac.setSifra(passwordEncoder.encode(dto.getSifra()));
+        kupac.setEmail(dto.getEmail());
+        kupac.setUloga("KUPAC");
+        kupac.setAktiviran(true);
+        kupac.setIme(dto.getIme().trim());
+
+        korisnikRepository.save(kupac);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Uspješna registracija! Sada se možete prijaviti."
+        ));
     }
 
     @PostMapping("/registracija/klijent")
@@ -65,6 +77,10 @@ public class AuthController {
         if (korisnikRepository.findByKorisnickoIme(dto.getKorisnickoIme()).isPresent()) {
 
             return ResponseEntity.badRequest().body(Map.of("message", "Korisničko ime je već zauzeto!"));
+        }
+
+        if (dto.getEmail() != null && korisnikRepository.existsByEmail(dto.getEmail())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email je već zauzet!"));
         }
 
         if (dto.getNazivObjekta() == null || dto.getNazivObjekta().isBlank()) {
@@ -122,8 +138,17 @@ public class AuthController {
                     .body(Map.of("message", "Neispravno korisničko ime ili lozinka!"));
         }
 
-        if (!Boolean.TRUE.equals(korisnik.getAktiviran())) {
-            
+        if (SuspenzijaUtil.ocistiAkoIstekla(korisnik)) {
+            korisnikRepository.save(korisnik);
+        }
+
+        if (SuspenzijaUtil.jeAktivna(korisnik)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", SuspenzijaUtil.poruka(korisnik)));
+        }
+
+        if (!"ADMINISTRATOR".equalsIgnoreCase(korisnik.getUloga())
+                && !Boolean.TRUE.equals(korisnik.getAktiviran())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "Nalog još uvijek nije aktiviran od strane administratora!"));
         }

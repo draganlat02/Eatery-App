@@ -17,9 +17,6 @@ public class KupacEntity extends KorisnikEntity {
     @Column(name = "popust")
     private Integer popust = 0;
 
-    @Column(name = "suspendovan")
-    private Boolean suspendovan = false;
-
     @Column(name = "cesti_kupac")
     private Boolean cestiKupac = false;
 }

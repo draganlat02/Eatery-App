@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "korisnik")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -30,6 +32,12 @@ public class KorisnikEntity {
 
     @Column(name = "aktiviran")
     private Boolean aktiviran = false;
+
+    @Column(name = "suspendovan")
+    private Boolean suspendovan = false;
+
+    @Column(name = "suspendovan_do")
+    private LocalDateTime suspendovanDo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_slike")

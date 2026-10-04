@@ -1,5 +1,8 @@
 package com.eatery.eaterybackend.security;
 
+import com.eatery.eaterybackend.entity.KorisnikEntity;
+import com.eatery.eaterybackend.repository.KorisnikRepository;
+import com.eatery.eaterybackend.util.SuspenzijaUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private KorisnikRepository korisnikRepository;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -29,6 +35,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUsernameFromJwtToken(jwt);
+                KorisnikEntity korisnik = korisnikRepository.findByKorisnickoIme(username).orElse(null);
+
+                if (korisnik != null && SuspenzijaUtil.ocistiAkoIstekla(korisnik)) {
+                    korisnikRepository.save(korisnik);
+                }
+
+                if (korisnik != null && SuspenzijaUtil.jeAktivna(korisnik)) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json;charset=UTF-8");
+                    String poruka = SuspenzijaUtil.poruka(korisnik).replace("\\", "\\\\").replace("\"", "\\\"");
+                    response.getWriter().write("{\"message\":\"" + poruka + "\"}");
+                    return;
+                }
+
+                if (korisnik != null
+                        && !"ADMINISTRATOR".equalsIgnoreCase(korisnik.getUloga())
+                        && !Boolean.TRUE.equals(korisnik.getAktiviran())) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"message\":\"Nalog još uvijek nije aktiviran od strane administratora!\"}");
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());

@@ -23,8 +23,8 @@ function RegisterKupac({ onSwitchToLogin }) {
         setGreska(false);
         setUcitavanje(true);
         try {
-            await API.post('/auth/registracija/kupac', formData);
-            setPoruka('Uspješna registracija! Sada se možete prijaviti.');
+            const res = await API.post('/auth/registracija/kupac', formData);
+            setPoruka(res.data?.message || 'Uspješna registracija! Sada se možete prijaviti.');
         } catch (err) {
             setGreska(true);
             setPoruka(err.response?.data?.message || 'Greška pri registraciji.');
@@ -45,7 +45,7 @@ function RegisterKupac({ onSwitchToLogin }) {
                 </div>
 
                 <h2 className="login-title">Registracija</h2>
-                <p className="login-subtitle">Otvorite nalog i naručujte vrećice iznenađenja.</p>
+                    <p className="login-subtitle">Otvorite nalog i naručujte vrećice iznenađenja.</p>
 
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="login-field">

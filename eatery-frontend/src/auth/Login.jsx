@@ -39,8 +39,9 @@ const handleLogin = async (e) => {
         setGreska(true);
 
         if (err.response) {
-
-            setPoruka(err.response.data?.message || `Greška na serveru: Status ${err.response.status}`);
+            const data = err.response.data;
+            const serverPoruka = typeof data === 'string' ? data : data?.message;
+            setPoruka(serverPoruka || `Greška na serveru: Status ${err.response.status}`);
         } else if (err.request) {
 
             setPoruka('Backend server nije dostupan.');
