@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS `eatery_db`.`korisnik` (
   `korisnicko_ime` VARCHAR(255) NOT NULL,
   `sifra` VARCHAR(255) NOT NULL,
   `uloga` VARCHAR(50) NOT NULL,
+  `suspendovan` BIT(1) NULL DEFAULT NULL,
+  `suspendovan_do` DATETIME(6) NULL DEFAULT NULL,
   `id_slike` BIGINT NULL DEFAULT NULL,
   PRIMARY KEY (`id_korisnika`),
   UNIQUE INDEX `UK87tbhltaua2a6k6jrdfl1kqap` (`email` ASC) VISIBLE,
@@ -157,7 +159,6 @@ CREATE TABLE IF NOT EXISTS `eatery_db`.`kupac` (
   `cesti_kupac` BIT(1) NULL DEFAULT NULL,
   `ime` VARCHAR(100) NOT NULL,
   `popust` INT NULL DEFAULT NULL,
-  `suspendovan` BIT(1) NULL DEFAULT NULL,
   `id_korisnika` BIGINT NOT NULL,
   PRIMARY KEY (`id_korisnika`),
   CONSTRAINT `FKxb1t01dgll4ffwbuosbyc1ml`
