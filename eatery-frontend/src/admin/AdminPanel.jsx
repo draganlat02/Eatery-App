@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API from '../api';
 import './AdminPanel.css';
 
@@ -18,6 +18,7 @@ function AdminPanel({ user, onLogout }) {
     const [korisniciLoading, setKorisniciLoading] = useState(false);
     const [pretraga, setPretraga] = useState('');
     const [aktiviranFilter, setAktiviranFilter] = useState('');
+    const [suspendovanFilter, setSuspendovanFilter] = useState('');
     const [sort, setSort] = useState('id');
     const [dir, setDir] = useState('asc');
     const [aktivacijaId, setAktivacijaId] = useState(null);
@@ -53,24 +54,27 @@ function AdminPanel({ user, onLogout }) {
     const ucitajKorisnike = useCallback(async () => {
         if (sekcija !== 'kupci' && sekcija !== 'klijenti') return;
         try {
-            setKorisniciLoading(true);
+            if (korisnici.length === 0) {
+                setKorisniciLoading(true);
+            }
             const putanja = sekcija === 'kupci' ? '/admin/kupci' : '/admin/klijenti';
             const res = await API.get(putanja, {
                 params: {
                     q: pretraga.trim() || undefined,
                     aktiviran: aktiviranFilter === '' ? undefined : aktiviranFilter === 'true',
-                    sort,
+                    suspendovan: suspendovanFilter === '' ? undefined : suspendovanFilter === 'true',
+                    sortBy: sort,
                     dir
                 }
             });
-            setKorisnici(res.data);
+            setKorisnici(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             const porukaGreske = err.response?.data?.message || err.message || 'Nepoznata greška';
             setPoruka(`Greška: ${porukaGreske}`);
         } finally {
             setKorisniciLoading(false);
         }
-    }, [sekcija, pretraga, aktiviranFilter, sort, dir]);
+    }, [sekcija, pretraga, aktiviranFilter, suspendovanFilter, sort, dir]);
 
     useEffect(() => {
         ucitajZahtjeve();
@@ -138,31 +142,6 @@ function AdminPanel({ user, onLogout }) {
         }
     };
 
-    const promeniSort = (polje) => {
-        if (sort === polje) {
-            setDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-        } else {
-            setSort(polje);
-            setDir('asc');
-        }
-    };
-
-    const sortOznaka = (polje) => {
-        if (sort !== polje) return '';
-        return dir === 'asc' ? ' ↑' : ' ↓';
-    };
-
-    const formatCijena = (vrijednost) => {
-        if (vrijednost == null) return '—';
-        return `${Number(vrijednost).toFixed(2)} KM`;
-    };
-
-    const nazivUloge = (uloga) => {
-        if (uloga === 'KLIJENT') return 'Restoran';
-        if (uloga === 'KUPAC') return 'Kupac';
-        return uloga || '—';
-    };
-
     const parseDatum = (vrijednost) => {
         if (vrijednost == null || vrijednost === '') return null;
         if (Array.isArray(vrijednost)) {
@@ -180,6 +159,81 @@ function AdminPanel({ user, onLogout }) {
             return doKad.getTime() > Date.now();
         }
         return k?.suspendovan === true;
+    };
+
+    const promeniSort = (polje) => {
+        if (sort === polje) {
+            setDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSort(polje);
+            setDir('asc');
+        }
+    };
+
+    const sortOznaka = (polje) => {
+        if (sort !== polje) return ' ↕';
+        return dir === 'asc' ? ' ↑' : ' ↓';
+    };
+
+    const usporediTekst = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), 'bs', { sensitivity: 'base' });
+
+    const usporediVrijednost = (a, b, polje) => {
+        if (polje === 'id' || polje === 'kolicina') {
+            return (Number(a) || 0) - (Number(b) || 0);
+        }
+        if (polje === 'akcijskaCijena' || polje === 'originalnaCijena') {
+            return (Number(a) || 0) - (Number(b) || 0);
+        }
+        if (polje === 'aktiviran' || polje === 'aktivna') {
+            return (a ? 1 : 0) - (b ? 1 : 0);
+        }
+        if (polje === 'datumPodnosenja' || polje === 'vrijemeKreiranja') {
+            const da = parseDatum(a)?.getTime() ?? 0;
+            const db = parseDatum(b)?.getTime() ?? 0;
+            return da - db;
+        }
+        return usporediTekst(a, b);
+    };
+
+    const sortirajListu = (lista, polje, smjer) => {
+        const mul = smjer === 'desc' ? -1 : 1;
+        return [...lista].sort((x, y) => {
+            if (polje === 'status') {
+                const rang = (k) => (jeSuspendovan(k) ? 2 : k.aktiviran ? 1 : 0);
+                return (rang(x) - rang(y)) * mul;
+            }
+            return usporediVrijednost(x?.[polje], y?.[polje], polje) * mul;
+        });
+    };
+
+    const prikazaniKorisnici = useMemo(() => {
+        const filtrirani = korisnici.filter((k) => {
+            if (suspendovanFilter === 'true') return jeSuspendovan(k);
+            if (suspendovanFilter === 'false') return !jeSuspendovan(k);
+            return true;
+        });
+        return sortirajListu(filtrirani, sort === 'aktiviran' ? 'status' : sort, dir);
+    }, [korisnici, sort, dir, suspendovanFilter]);
+
+    const prikazaniZahtjevi = useMemo(
+        () => sortirajListu(zahtjevi, sort, dir),
+        [zahtjevi, sort, dir]
+    );
+
+    const prikazaniOglasi = useMemo(
+        () => sortirajListu(oglasi, sort, dir),
+        [oglasi, sort, dir]
+    );
+
+    const formatCijena = (vrijednost) => {
+        if (vrijednost == null) return '—';
+        return `${Number(vrijednost).toFixed(2)} KM`;
+    };
+
+    const nazivUloge = (uloga) => {
+        if (uloga === 'KLIJENT') return 'Restoran';
+        if (uloga === 'KUPAC') return 'Kupac';
+        return uloga || '—';
     };
 
     const formatDatum = (vrijednost) => {
@@ -302,11 +356,11 @@ function AdminPanel({ user, onLogout }) {
         },
         kupci: {
             title: 'Kupci',
-            text: 'Pregled kupaca iz baze. Pretražite, filtrirajte i po potrebi suspendujte nalog na određeni period.'
+            text: 'Pregled kupaca iz baze. Pretražite, sortirajte, filtrirajte i po potrebi suspendujte nalog.'
         },
         klijenti: {
             title: 'Restorani',
-            text: 'Pregled klijenata iz baze. Aktivirajte restorane ili suspendujte nalog na određeni period.'
+            text: 'Pregled klijenata iz baze. Sortirajte listu, aktivirajte restorane ili suspendujte nalog.'
         },
         oglasi: {
             title: 'Oglasi',
@@ -328,10 +382,42 @@ function AdminPanel({ user, onLogout }) {
                     value={pretraga}
                     onChange={(e) => setPretraga(e.target.value)}
                 />
-                <select value={aktiviranFilter} onChange={(e) => setAktiviranFilter(e.target.value)}>
-                    <option value="">Svi statusi</option>
+                <select
+                    value={aktiviranFilter}
+                    aria-label="Filter aktivacije"
+                    onChange={(e) => setAktiviranFilter(e.target.value)}
+                >
+                    <option value="">Sva aktivacija</option>
                     <option value="true">Aktivirani</option>
                     <option value="false">Neaktivirani</option>
+                </select>
+                <select
+                    value={suspendovanFilter}
+                    aria-label="Filter suspenzije"
+                    onChange={(e) => setSuspendovanFilter(e.target.value)}
+                >
+                    <option value="">Sve suspenzije</option>
+                    <option value="true">Suspendovani</option>
+                    <option value="false">Nisu suspendovani</option>
+                </select>
+                <select
+                    value={sort}
+                    aria-label="Sortiraj po"
+                    onChange={(e) => {
+                        setSort(e.target.value);
+                        setDir('asc');
+                    }}
+                >
+                    <option value="id">Sortiraj: ID</option>
+                    <option value="prikazIme">{tip === 'kupci' ? 'Sortiraj: Ime' : 'Sortiraj: Objekat'}</option>
+                    <option value="korisnickoIme">Sortiraj: Korisničko ime</option>
+                    <option value="email">Sortiraj: Email</option>
+                    {tip === 'klijenti' && <option value="adresa">Sortiraj: Adresa</option>}
+                    <option value="aktiviran">Sortiraj: Status</option>
+                </select>
+                <select value={dir} aria-label="Smjer sortiranja" onChange={(e) => setDir(e.target.value)}>
+                    <option value="asc">Rastuće (A–Z)</option>
+                    <option value="desc">Opadajuće (Z–A)</option>
                 </select>
             </div>
 
@@ -340,17 +426,17 @@ function AdminPanel({ user, onLogout }) {
                     <div className="admin-inline-loading">
                         {tip === 'kupci' ? 'Učitavanje kupaca...' : 'Učitavanje restorana...'}
                     </div>
-                ) : korisnici.length === 0 ? (
+                ) : prikazaniKorisnici.length === 0 ? (
                     <div className="admin-empty">
                         <h3>
-                            {pretraga.trim() || aktiviranFilter
+                            {pretraga.trim() || aktiviranFilter || suspendovanFilter
                                 ? 'Nema rezultata'
                                 : tip === 'kupci'
                                     ? 'Nema kupaca u bazi korisnika'
                                     : 'Nema restorana'}
                         </h3>
                         <p>
-                            {pretraga.trim() || aktiviranFilter
+                            {pretraga.trim() || aktiviranFilter || suspendovanFilter
                                 ? 'Nema rezultata za zadatu pretragu ili filter.'
                                 : tip === 'kupci'
                                     ? 'Nijedan korisnik sa ulogom kupca nije pronađen u tabeli korisnik.'
@@ -397,7 +483,7 @@ function AdminPanel({ user, onLogout }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {korisnici.map((k) => (
+                            {prikazaniKorisnici.map((k) => (
                                 <tr key={k.id}>
                                     <td>{k.id}</td>
                                     <td>{k.prikazIme || '—'}</td>
@@ -469,14 +555,14 @@ function AdminPanel({ user, onLogout }) {
                         <button
                             type="button"
                             className={sekcija === 'kupci' ? 'is-active' : ''}
-                            onClick={() => { setSekcija('kupci'); setPretraga(''); setAktiviranFilter(''); }}
+                            onClick={() => { setSekcija('kupci'); setPretraga(''); setAktiviranFilter(''); setSuspendovanFilter(''); setSort('id'); setDir('asc'); }}
                         >
                             Kupci
                         </button>
                         <button
                             type="button"
                             className={sekcija === 'klijenti' ? 'is-active' : ''}
-                            onClick={() => { setSekcija('klijenti'); setPretraga(''); setAktiviranFilter(''); }}
+                            onClick={() => { setSekcija('klijenti'); setPretraga(''); setAktiviranFilter(''); setSuspendovanFilter(''); setSort('id'); setDir('asc'); }}
                         >
                             Restorani
                         </button>
@@ -521,18 +607,42 @@ function AdminPanel({ user, onLogout }) {
                             <table className="admin-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Uloga</th>
-                                        <th>Objekat</th>
-                                        <th>Korisničko ime</th>
-                                        <th>Email</th>
-                                        <th>Datum</th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('id')}>
+                                                ID{sortOznaka('id')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('uloga')}>
+                                                Uloga{sortOznaka('uloga')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('prikazIme')}>
+                                                Objekat{sortOznaka('prikazIme')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('korisnickoIme')}>
+                                                Korisničko ime{sortOznaka('korisnickoIme')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('email')}>
+                                                Email{sortOznaka('email')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('datumPodnosenja')}>
+                                                Datum{sortOznaka('datumPodnosenja')}
+                                            </button>
+                                        </th>
                                         <th>Status</th>
                                         <th>Akcije</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {zahtjevi.map((z) => (
+                                    {prikazaniZahtjevi.map((z) => (
                                         <tr key={z.id}>
                                             <td>{z.id}</td>
                                             <td>{nazivUloge(z.uloga)}</td>
@@ -589,16 +699,36 @@ function AdminPanel({ user, onLogout }) {
                             <table className="admin-table">
                                 <thead>
                                     <tr>
-                                        <th>Oglas</th>
-                                        <th>Restoran</th>
-                                        <th>Cijena</th>
-                                        <th>Količina</th>
-                                        <th>Status</th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('naziv')}>
+                                                Oglas{sortOznaka('naziv')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('restoran')}>
+                                                Restoran{sortOznaka('restoran')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('akcijskaCijena')}>
+                                                Cijena{sortOznaka('akcijskaCijena')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('kolicina')}>
+                                                Količina{sortOznaka('kolicina')}
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" className="admin-sort" onClick={() => promeniSort('aktivna')}>
+                                                Status{sortOznaka('aktivna')}
+                                            </button>
+                                        </th>
                                         <th>Akcije</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {oglasi.map((o) => (
+                                    {prikazaniOglasi.map((o) => (
                                         <tr key={o.id}>
                                             <td>
                                                 <strong>{o.naziv}</strong>

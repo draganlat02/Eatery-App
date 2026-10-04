@@ -245,6 +245,12 @@
     text-transform: inherit;
     padding: 0;
     cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.admin-sort:hover {
+    color: var(--primary);
 }
 
 .admin-inline-loading {

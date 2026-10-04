@@ -173,7 +173,7 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminKorisnikDTO> getKupce(String q, Boolean aktiviran, String sort, String dir) {
+    public List<AdminKorisnikDTO> getKupce(String q, Boolean aktiviran, Boolean suspendovan, String sort, String dir) {
         Map<Long, AdminKorisnikDTO> poId = new LinkedHashMap<>();
         for (KupacEntity kupac : kupacRepository.findAll()) {
             poId.put(kupac.getId(), toKorisnikDto(kupac));
@@ -186,12 +186,12 @@ public class AdminService {
             }
             poId.putIfAbsent(k.getId(), toKorisnikDto(k));
         }
-        return filterSort(poId.values().stream(), q, aktiviran, sort, dir);
+        return filterSort(poId.values().stream(), q, aktiviran, suspendovan, sort, dir);
     }
 
     @Transactional(readOnly = true)
-    public List<AdminKorisnikDTO> getKlijente(String q, Boolean aktiviran, String sort, String dir) {
-        return filterSort(klijentRepository.findAll().stream().map(this::toKorisnikDto), q, aktiviran, sort, dir);
+    public List<AdminKorisnikDTO> getKlijente(String q, Boolean aktiviran, Boolean suspendovan, String sort, String dir) {
+        return filterSort(klijentRepository.findAll().stream().map(this::toKorisnikDto), q, aktiviran, suspendovan, sort, dir);
     }
 
     @Transactional(readOnly = true)
@@ -213,6 +213,7 @@ public class AdminService {
     private List<AdminKorisnikDTO> filterSort(Stream<AdminKorisnikDTO> stream,
                                               String q,
                                               Boolean aktiviran,
+                                              Boolean suspendovan,
                                               String sort,
                                               String dir) {
         String query = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
@@ -221,6 +222,7 @@ public class AdminService {
 
         Stream<AdminKorisnikDTO> filtered = stream
                 .filter(k -> aktiviran == null || aktiviran.equals(k.getAktiviran()))
+                .filter(k -> suspendovan == null || suspendovan.equals(Boolean.TRUE.equals(k.getSuspendovan())))
                 .filter(k -> query.isEmpty() || matchesSearch(k, query));
 
         Comparator<AdminKorisnikDTO> comparator = comparatorFor(sortField);

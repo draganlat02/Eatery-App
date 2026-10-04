@@ -40,22 +40,28 @@ public class AdminController {
     public ResponseEntity<List<AdminKorisnikDTO>> getKupce(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean aktiviran,
-            @RequestParam(required = false, defaultValue = "id") String sort,
+            @RequestParam(required = false) Boolean suspendovan,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String sortBy,
             @RequestParam(required = false, defaultValue = "asc") String dir,
             Authentication authentication) {
         adminService.requireAdmin(authentication);
-        return ResponseEntity.ok(adminService.getKupce(q, aktiviran, sort, dir));
+        String polje = (sortBy != null && !sortBy.isBlank()) ? sortBy : sort;
+        return ResponseEntity.ok(adminService.getKupce(q, aktiviran, suspendovan, polje, dir));
     }
 
     @GetMapping("/klijenti")
     public ResponseEntity<List<AdminKorisnikDTO>> getKlijente(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean aktiviran,
-            @RequestParam(required = false, defaultValue = "id") String sort,
+            @RequestParam(required = false) Boolean suspendovan,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String sortBy,
             @RequestParam(required = false, defaultValue = "asc") String dir,
             Authentication authentication) {
         adminService.requireAdmin(authentication);
-        return ResponseEntity.ok(adminService.getKlijente(q, aktiviran, sort, dir));
+        String polje = (sortBy != null && !sortBy.isBlank()) ? sortBy : sort;
+        return ResponseEntity.ok(adminService.getKlijente(q, aktiviran, suspendovan, polje, dir));
     }
 
     @PostMapping("/korisnici/{id}/aktiviraj")
