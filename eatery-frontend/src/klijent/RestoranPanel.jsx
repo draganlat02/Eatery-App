@@ -584,35 +584,20 @@ setJela(resJela.data);
     // =========================================================
     // PROMJENA STATUSA NARUDŽBE
     // =========================================================
+const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
+    try {
+        // Uklonjen prvi '/api' jer ga tvoj API instance već ima u baseURL
+        await API.put(`/narudzbe/${narudzbaId}/status?status=${noviStatus}`);
 
-    const PromijeniStatusNarudzbe = async (
-        narudzbaId,
-        noviStatus
-    ) => {
-
-        try {
-
-          await API.put(
-    `/restoran/narudzba/${narudzbaId}/status`,
-    noviStatus,
-    {
-        headers: {
-            "Content-Type": "text/plain"
-        }
+        ucitajNarudzbe();
+        ucitajStatistiku();
+    } catch (err) {
+        console.error(
+            "Greška pri promjeni statusa narudžbe:",
+            err.response?.data || err.message
+        );
     }
-);
-
-            ucitajNarudzbe();
-            ucitajStatistiku();
-
-        } catch (err) {
-
-            console.error(
-                "Greška pri promjeni statusa narudžbe:",
-                err
-            );
-        }
-    };
+};
 
 
     // =========================================================
@@ -730,6 +715,7 @@ setJela(resJela.data);
     })();
 
 
+    
     // =========================================================
     // RENDER
     // =========================================================
@@ -1285,229 +1271,168 @@ setJela(resJela.data);
                         ) : (
 
                             <>
-                            <div className="orders-list">
+                          <div className="orders-list">
+    {prikazaneNarudzbe.map((n) => {
+        // Definisanje statusnih varijabli na vrhu petlje
+        const status = n.status?.toUpperCase();
 
-                                {prikazaneNarudzbe.map(n => (
+        // Završni statusi - nakon ovih statusa više nema izmjena
+        const jeKrajnjiStatus =
+            status === "DOSTAVLJENO" ||
+            status === "PREUZETO" ||
+            status === "OTKAZANA" ||
+            status === "OTKAZANO" ||
+            status === "ODBIJENA";
 
-                                    <article
-                                        className="order-card"
-                                        key={n.id}
-                                    >
+        // Ako je narudžba već spremna ili završena, ne može se vraćati na "U pripremi"
+        const jeSpremnoIliVise = status === "SPREMNO" || jeKrajnjiStatus;
 
-                                        <div className="order-card-header">
+        return (
+            <article className="order-card" key={n.id}>
+                {/* ZAGLAVLJE KARTICE */}
+                <div className="order-card-header">
+                    <div>
+                        <span className="order-number-label">NARUDŽBA</span>
+                        <h3>#{n.id}</h3>
+                    </div>
 
-                                            <div>
+                    <div
+                        className={`order-status ${
+                            jeKrajnjiStatus && status !== "PREUZETO" && status !== "DOSTAVLJENO"
+                                ? "cancelled"
+                                : !status || status === "ZAPRIMLJENO" || status === "KREIRANA"
+                                ? "received"
+                                : status === "U_PRIPREMI"
+                                ? "preparing"
+                                : status === "SPREMNO"
+                                ? "ready"
+                                : "delivered"
+                        }`}
+                    >
+                        <span />
+                        {n.status || "ZAPRIMLJENO"}
+                    </div>
+                </div>
 
-                                                <span className="order-number-label">
-                                                    NARUDŽBA
-                                                </span>
+                {/* TIJELO KARTICE */}
+                <div className="order-card-body">
+                    <div className="order-info">
+                        <span>📍 Adresa</span>
+                        <strong>{n.adresaDostave || "Nije navedena"}</strong>
+                    </div>
 
-                                                <h3>
-                                                    #{n.id}
-                                                </h3>
+                    <div className="order-info">
+                        <span>💰 Ukupna cijena</span>
+                        <strong className="order-price">
+                            {Number(n.ukupnaCijena || 0).toFixed(2)} KM
+                        </strong>
+                    </div>
+                </div>
 
-                                            </div>
+                {/* UNOS PIN-A ZA PREUZIMANJE */}
+                {!jeKrajnjiStatus && (
+                    <div className="eatery-pin-unos">
+                        <span className="action-label">🔐 PIN za preuzimanje:</span>
 
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={4}
+                            placeholder="0000"
+                            value={pinUnosi[n.id] || ""}
+                            onChange={(e) => promijeniPinUnos(n.id, e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") potvrdiPreuzimanje(n.id);
+                            }}
+                        />
 
-                                            <div
-                                                className={`order-status ${
-                                                    n.status === "OTKAZANA" ||
-                                                    n.status === "OTKAZANO" ||
-                                                    n.status === "ODBIJENA"
-                                                        ? "cancelled"
-                                                        : !n.status ||
-                                                    n.status ===
-                                                        "ZAPRIMLJENO"
-                                                        ? "received"
-                                                        : n.status ===
-                                                          "U_PRIPREMI"
-                                                        ? "preparing"
-                                                        : n.status ===
-                                                          "SPREMNO"
-                                                        ? "ready"
-                                                        : "delivered"
-                                                }`}
-                                            >
+                        <button
+                            type="button"
+                            disabled={pinObrada === n.id}
+                            onClick={() => potvrdiPreuzimanje(n.id)}
+                        >
+                            {pinObrada === n.id ? "Provjera..." : "Potvrdi preuzimanje"}
+                        </button>
 
-                                                <span />
-
-                                                {n.status ||
-                                                    "ZAPRIMLJENO"}
-
-                                            </div>
-
-                                        </div>
-
-
-                                        <div className="order-card-body">
-
-                                            <div className="order-info">
-
-                                                <span>
-                                                    📍 Adresa
-                                                </span>
-
-                                                <strong>
-                                                    {n.adresaDostave ||
-                                                        "Nije navedena"}
-                                                </strong>
-
-                                            </div>
-
-
-                                            <div className="order-info">
-
-                                                <span>
-                                                    💰 Ukupna cijena
-                                                </span>
-
-                                                <strong className="order-price">
-                                                    {Number(
-                                                        n.ukupnaCijena ||
-                                                            0
-                                                    ).toFixed(2)}
-                                                    {" "}
-                                                    KM
-                                                </strong>
-
-                                            </div>
-
-                                        </div>
-
-
-                                        {n.status !== "PREUZETO" &&
-                                            n.status !== "OTKAZANA" &&
-                                            n.status !== "OTKAZANO" &&
-                                            n.status !== "ODBIJENA" && (
-                                            <div className="eatery-pin-unos">
-                                                <span className="action-label">
-                                                    🔐 PIN za preuzimanje:
-                                                </span>
-
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    maxLength={4}
-                                                    placeholder="0000"
-                                                    value={pinUnosi[n.id] || ""}
-                                                    onChange={(e) =>
-                                                        promijeniPinUnos(n.id, e.target.value)
-                                                    }
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") potvrdiPreuzimanje(n.id);
-                                                    }}
-                                                />
-
-                                                <button
-                                                    type="button"
-                                                    disabled={pinObrada === n.id}
-                                                    onClick={() => potvrdiPreuzimanje(n.id)}
-                                                >
-                                                    {pinObrada === n.id
-                                                        ? "Provjera..."
-                                                        : "Potvrdi preuzimanje"}
-                                                </button>
-
-                                                {pinPoruke[n.id] && (
-                                                    <div className={`eatery-pin-poruka ${pinPoruke[n.id].tip}`}>
-                                                        {pinPoruke[n.id].tekst}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-
-                                        <div className="order-card-actions">
-
-                                            <span className="action-label">
-                                                Promijeni status:
-                                            </span>
-
-
-                                            <div className="status-buttons">
-
-                                                <button
-                                                    className={
-                                                        n.status ===
-                                                        "U_PRIPREMI"
-                                                            ? "status-button selected"
-                                                            : "status-button"
-                                                    }
-                                                    onClick={() =>
-                                                        PromijeniStatusNarudzbe(
-                                                            n.id,
-                                                            "U_PRIPREMI"
-                                                        )
-                                                    }
-                                                >
-                                                    U pripremi
-                                                </button>
-
-
-                                                <button
-                                                    className={
-                                                        n.status ===
-                                                        "SPREMNO"
-                                                            ? "status-button selected"
-                                                            : "status-button"
-                                                    }
-                                                    onClick={() =>
-                                                        PromijeniStatusNarudzbe(
-                                                            n.id,
-                                                            "SPREMNO"
-                                                        )
-                                                    }
-                                                >
-                                                    Spremno
-                                                </button>
-
-
-                                                <button
-                                                    className={
-                                                        n.status ===
-                                                        "DOSTAVLJENO"
-                                                            ? "status-button selected"
-                                                            : "status-button"
-                                                    }
-                                                    onClick={() =>
-                                                        PromijeniStatusNarudzbe(
-                                                            n.id,
-                                                            "DOSTAVLJENO"
-                                                        )
-                                                    }
-                                                >
-                                                    Dostavljeno
-                                                </button>
-
-
-                                                <button
-                                                    className={
-                                                        n.status ===
-                                                            "OTKAZANA" ||
-                                                        n.status ===
-                                                            "OTKAZANO"
-                                                            ? "status-button selected cancel"
-                                                            : "status-button cancel"
-                                                    }
-                                                    onClick={() =>
-                                                        PromijeniStatusNarudzbe(
-                                                            n.id,
-                                                            "OTKAZANA"
-                                                        )
-                                                    }
-                                                >
-                                                    Otkaži
-                                                </button>
-
-                                            </div>
-
-                                        </div>
-
-                                    </article>
-
-                                ))}
-
+                        {pinPoruke[n.id] && (
+                            <div className={`eatery-pin-poruka ${pinPoruke[n.id].tip}`}>
+                                {pinPoruke[n.id].tekst}
                             </div>
+                        )}
+                    </div>
+                )}
+
+                {/* DUGMAD ZA PROMJENU STATUSA */}
+               <div className="order-card-actions">
+    <span className="action-label">Promijeni status:</span>
+
+    <div className="status-buttons">
+    {/* U PRIPREMI */}
+    <button
+        type="button"
+        className={
+            status === "U_PRIPREMI"
+                ? "status-button selected"
+                : "status-button"
+        }
+        disabled={status !== "ZAPRIMLJENO" && status !== "KREIRANA"}
+        onClick={() => PromijeniStatusNarudzbe(n.id, "U_PRIPREMI")}
+    >
+        U pripremi
+    </button>
+
+    {/* SPREMNO */}
+    <button
+        type="button"
+        className={
+            status === "SPREMNO"
+                ? "status-button selected"
+                : "status-button"
+        }
+        disabled={status !== "U_PRIPREMI"}
+        onClick={() => PromijeniStatusNarudzbe(n.id, "SPREMNO")}
+    >
+        Spremno
+    </button>
+
+    {/* DOSTAVLJENO */}
+    <button
+        type="button"
+        className={
+            status === "DOSTAVLJENO"
+                ? "status-button selected"
+                : "status-button"
+        }
+        disabled={status !== "SPREMNO"}
+        onClick={() => PromijeniStatusNarudzbe(n.id, "DOSTAVLJENO")}
+    >
+        Dostavljeno
+    </button>
+
+    {/* OTKAŽI */}
+    <button
+        type="button"
+        className={
+            status === "OTKAZANA" || status === "OTKAZANO" || status === "ODBIJENA"
+                ? "status-button selected cancel"
+                : "status-button cancel"
+        }
+        disabled={
+            status === "DOSTAVLJENO" ||
+            status === "OTKAZANA" ||
+            status === "OTKAZANO" ||
+            status === "ODBIJENA"
+        }
+        onClick={() => PromijeniStatusNarudzbe(n.id, "OTKAZANA")}
+    >
+        Otkaži
+    </button>
+</div>
+</div>
+            </article>
+        );
+    })}
+</div>
 
                             {narudzbe.length > NARUDZBI_PO_STRANICI && (
                                 <div className="orders-pagination">

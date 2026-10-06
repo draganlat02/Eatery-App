@@ -218,14 +218,12 @@ public class NarudzbaController {
         try {
 
             if (authentication == null) {
-
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
             }
 
             NarudzbaEntity narudzba = narudzbaRepository.findById(id).orElse(null);
 
             if (narudzba == null) {
-
                 return ResponseEntity.badRequest().body("Narudžba sa ID " + id + " nije pronađena!");
             }
 
@@ -233,24 +231,36 @@ public class NarudzbaController {
             KorisnikEntity ulogovaniKorisnik = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
 
             if (ulogovaniKorisnik == null || !narudzba.getRestoran().getId().equals(ulogovaniKorisnik.getId())) {
-                
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body("Nemate dozvolu da menjate status narudžbe koja ne pripada vašem restoranu!");
             }
 
-            if (narudzba.getSifra() == null || narudzba.getSifra().isEmpty()) {
+            // --- VALIDACIJA TRANSICIONALNIH STATUSA ---
+            String trenutniStatus = narudzba.getStatus() != null ? narudzba.getStatus().toUpperCase() : "";
+            String noviStatus = status != null ? status.toUpperCase() : "";
 
+            // 1. Ako je već zavrešeno (DOSTAVLJENO ili OTKAZANO/OTKAZANA), onemogući izmjene
+            // Ako je narudžba završena ili otkazana, onemogući izmjene
+            if ("DOSTAVLJENO".equals(trenutniStatus) || "PREUZETO".equals(trenutniStatus) || "OTKAZANO".equals(trenutniStatus) || "OTKAZANA".equals(trenutniStatus)) {
+                return ResponseEntity.badRequest().body("Status zavrešene narudžbe se više ne može mijenjati!");
+            }
+
+            // 2. Ako je SPREMNO, ne može se vratiti u U_PRIPREMI
+            if ("SPREMNO".equals(trenutniStatus) && "U_PRIPREMI".equals(noviStatus)) {
+                return ResponseEntity.badRequest().body("Narudžba koja je označena kao SPREMNO ne može se vratiti u pripremu!");
+            }
+            // ------------------------------------------
+
+            if (narudzba.getSifra() == null || narudzba.getSifra().isEmpty()) {
                 narudzba.setSifra("ORD-" + System.currentTimeMillis());
             }
 
-            narudzba.setStatus(status);
+            narudzba.setStatus(noviStatus);
             narudzbaRepository.save(narudzba);
 
-            return ResponseEntity.ok("Status uspešno promenjen u: " + status);
+            return ResponseEntity.ok("Status uspešno promenjen u: " + noviStatus);
         } catch (Exception e) {
-
             e.printStackTrace();
-
             return ResponseEntity.status(500).body("Greška pri izmeni statusa: " + e.getMessage());
         }
     }

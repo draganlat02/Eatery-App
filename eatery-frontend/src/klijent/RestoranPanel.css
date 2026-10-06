@@ -1158,10 +1158,8 @@
 }
 
 
-.status-button:hover {
-
+.status-button:not(:disabled):hover {
     background: var(--surface-soft);
-
     color: var(--text);
 }
 
@@ -2762,4 +2760,14 @@
         gap: 4px;
     }
 
+
+.status-button:disabled,
+.status-button:disabled:hover {
+    background: #ffffff !important;
+    color: #a0aec0 !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    cursor: not-allowed !important;
+}
 }
