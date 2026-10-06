@@ -1,11 +1,10 @@
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 
-const WS_URL = 'http://localhost:8000/ws';
+const WS_URL = 'ws://localhost:8000/ws';
 
 export function pretplatiSeNaTopic(topic, onPoruka) {
     const client = new Client({
-        webSocketFactory: () => new SockJS(WS_URL),
+        brokerURL: WS_URL,
         reconnectDelay: 5000,
         onConnect: () => {
             client.subscribe(topic, (poruka) => {
