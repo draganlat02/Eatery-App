@@ -19,7 +19,7 @@ public class ZahtjevZaAktivacijuEntity {
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_korisnika", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "sifra", "lozinka"})
     private KorisnikEntity korisnik;
 
     @Column(name = "vrijeme_kreiranja")
