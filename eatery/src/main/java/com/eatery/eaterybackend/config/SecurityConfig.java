@@ -40,6 +40,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/restoran/*/jela").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/restoran/*/kategorije").permitAll()
 
+                        // JAVNE RUTE ZA RECENZIJE
+                        .requestMatchers(HttpMethod.GET, "/api/recenzije/restoran/*/ocjena").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recenzije/provjeri/*").permitAll()
+
+                        // ZAŠTIĆENE RUTE ZA RECENZIJE (potreban JWT token)
+                        .requestMatchers(HttpMethod.POST, "/api/recenzije").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/recenzije/moja-ocjena").authenticated()
+
                         .requestMatchers("/ws/**").permitAll()
 
                         .anyRequest().authenticated()
