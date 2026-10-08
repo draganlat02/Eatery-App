@@ -3,6 +3,9 @@ package com.eatery.eaterybackend.controller;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -193,7 +196,6 @@ public class NarudzbaController {
     public ResponseEntity<?> getNarudzbeZaKupca(@PathVariable("kupacId") Long kupacId, Authentication authentication) {
 
         if (authentication == null) {
-
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Niste autentifikovani!");
         }
 
@@ -201,12 +203,30 @@ public class NarudzbaController {
         KorisnikEntity ulogovaniKorisnik = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
 
         if (ulogovaniKorisnik == null || !ulogovaniKorisnik.getId().equals(kupacId)) {
-
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Nemate dozvolu da gledate narudžbe drugog kupca!");
         }
 
-        return ResponseEntity.ok(narudzbaRepository.findByKupacId(kupacId));
+        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacId(kupacId);
+
+        List<NarudzbaDTO> dtos = narudzbe.stream().map(n -> {
+            NarudzbaDTO dto = new NarudzbaDTO();
+            dto.setId(n.getId());
+            dto.setKupacId(n.getKupac() != null ? n.getKupac().getId() : null);
+
+            if (n.getRestoran() != null) {
+                dto.setRestoranId(n.getRestoran().getId());
+                dto.setRestoranNaziv(n.getRestoran().getKorisnickoIme());
+            }
+
+            dto.setSifra(n.getSifra());
+            dto.setAdresaDostave(n.getAdresaDostave());
+            dto.setStatus(n.getStatus());
+            dto.setUkupnaCijena(n.getUkupnaCijena());
+            return dto;
+        }).toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     @PutMapping("/{id}/status")

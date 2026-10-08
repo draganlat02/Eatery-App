@@ -34,6 +34,7 @@ import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.KupacRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
+import com.eatery.eaterybackend.repository.RecenzijaRepository;
 
 @RestController
 @RequestMapping("/api/kupac")
@@ -46,13 +47,15 @@ public class KupacController {
     private final JeloRepository jeloRepository;
     private final NarudzbaRepository narudzbaRepository;
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
+    private final RecenzijaRepository recenzijaRepository;
 
     public KupacController(KorisnikRepository korisnikRepository,
                            KupacRepository kupacRepository,
                            KlijentRepository klijentRepository,
                            JeloRepository jeloRepository,
                            NarudzbaRepository narudzbaRepository,
-                           StavkaNarudzbeRepository stavkaNarudzbeRepository) {
+                           StavkaNarudzbeRepository stavkaNarudzbeRepository,
+                           RecenzijaRepository recenzijaRepository) {
                             
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
@@ -60,6 +63,7 @@ public class KupacController {
         this.jeloRepository = jeloRepository;
         this.narudzbaRepository = narudzbaRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
+        this.recenzijaRepository=recenzijaRepository;
     }
 
     private boolean isKorisnikOvlascen(Long trazeniKorisnikId, Authentication authentication) {
@@ -167,10 +171,18 @@ public class KupacController {
 
     @GetMapping("/restorani")
     public ResponseEntity<List<KlijentEntity>> getAktivniRestorani() {
-
-        return ResponseEntity.ok(klijentRepository.findAll().stream()
+        List<KlijentEntity> restorani = klijentRepository.findAll().stream()
                 .filter(k -> Boolean.TRUE.equals(k.getAktiviran()))
-                .toList());
+                .peek(k -> {
+                    Double prosjek = recenzijaRepository.getProsjecnaOcjenaZaRestoran(k.getId());
+                    Long ukupno = recenzijaRepository.countByRestoranId(k.getId()); // <--- Illi countByRestoranId balasi
+
+                    k.setProsjecnaOcjena(prosjek != null ? prosjek : 0.0);
+                    k.setUkupanBrojOcjena(ukupno != null ? ukupno : 0L);
+                })
+                .toList();
+
+        return ResponseEntity.ok(restorani);
     }
 
     @PostMapping("/narudzba")
@@ -232,9 +244,9 @@ public class KupacController {
 
     @GetMapping("/narudzbe/{kupacId}")
     public ResponseEntity<?> getNarudzbeKupca(@PathVariable Long kupacId, Authentication authentication) {
-        
+
         if (!isKorisnikOvlascen(kupacId, authentication)) {
-            
+
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da gledate narudžbe drugog kupca!");
         }
 

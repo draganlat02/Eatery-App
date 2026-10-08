@@ -3743,4 +3743,399 @@
         font-size: 12px;
     }
 
+    /* Kontejner za naslov i ocjenu */
+.restaurant-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.restaurant-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Red za zvjezdice i tekst ocjene */
+.restaurant-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tekst ocjene pored zvjezdica */
+.rating-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+/* Ako StarRating ima žute zvjezdice, osiguraj da su uočljive */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #f59e0b; /* Zlatno-žuta boja za popunjene zvjezdice */
+}
+.map-card-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 10px;
+}
+
+.map-card-rating > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.kupac-map-restaurant-card {
+    display: flex;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.kupac-map-restaurant-card:hover {
+    transform: translateY(-3px);
+    border-color: #d1d5db;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+.map-card-icon {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    font-size: 25px;
+}
+
+.map-card-info h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.map-card-address,
+.map-card-hours {
+    margin: 6px 0;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.map-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.map-card-distance {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.map-card-bottom button {
+    border: 0;
+    border-radius: 10px;
+    padding: 9px 13px;
+    background: #111827;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.map-card-bottom button:hover {
+    opacity: 0.88;
+}
+/* Dugme u podnožju kartice narudžbe */
+/* ==========================================
+   STILOVI ZA OCJENJIVANJE UNUTAR KARTICE
+   ========================================== */
+
+/* ==========================================
+   DUGMAD ZA OCJENJIVANJE
+   ========================================== */
+
+.btn-rate-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 15px;
+    background: #ffffff;
+    color: #b7791f;
+    border: 1px solid #ead9b8;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-rate-open::before {
+    content: "★";
+    font-size: 13px;
+    color: #f59e0b;
+}
+
+.btn-rate-open:hover {
+    background: #fffbf2;
+    border-color: #f2c66d;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(245, 158, 11, 0.10);
+}
+
+.btn-rate-cancel {
+    padding: 9px 15px;
+    background: transparent;
+    color: #7b8583;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-rate-cancel:hover {
+    background: #f5f7f6;
+    color: #37403f;
+}
+
+/* ==========================================
+   VEĆ OCJENJENO
+   ========================================== */
+
+.badge-rated {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f0fdf9;
+    color: #087f6d;
+    border: 1px solid #ccefe7;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-rated::before {
+    content: "✓";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    background: #0f766e;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+}
+
+/* ==========================================
+   REVIEW PANEL
+   ========================================== */
+
+.rating-inline-card {
+    position: relative;
+    margin-top: 14px;
+    padding: 22px 22px 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #fbfcfc 100%);
+    border: 1px solid #e7ecea;
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(23, 32, 31, 0.055), 0 2px 6px rgba(23, 32, 31, 0.025);
+    animation: ratingPanelIn 0.25s ease-out;
+}
+
+@keyframes ratingPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rating-inline-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 22px;
+    width: 42px;
+    height: 3px;
+    background: #0f766e;
+    border-radius: 0 0 5px 5px;
+}
+
+/* ==========================================
+   HEADER
+   ========================================== */
+
+.rating-inline-header {
+    margin-bottom: 18px;
+}
+
+.rating-inline-header h4 {
+    margin: 0 0 5px;
+    color: #17201f;
+    font-size: 16px;
+    font-weight: 750;
+    letter-spacing: -0.2px;
+}
+
+.rating-inline-header p {
+    margin: 0;
+    color: #7a8582;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ==========================================
+   ZVJEZDICE
+   ========================================== */
+
+.interactive-stars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin: 2px 0 18px;
+    padding: 8px 0;
+}
+
+.star-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 39px;
+    height: 39px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #d8dddb;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.star-btn:hover {
+    color: #f5b83d;
+    background: #fffbf2;
+    transform: translateY(-2px) scale(1.08);
+}
+
+.star-btn.filled {
+    color: #f5b83d;
+    text-shadow: 0 3px 10px rgba(245, 184, 61, 0.18);
+}
+
+.star-btn.filled:hover {
+    color: #e7a52c;
+}
+
+.star-rating-label {
+    margin-left: 10px;
+    color: #37403f;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* ==========================================
+   KOMENTAR
+   ========================================== */
+
+.rating-form-group {
+    position: relative;
+}
+
+.rating-form-group textarea {
+    display: block;
+    width: 100%;
+    min-height: 88px;
+    box-sizing: border-box;
+    padding: 13px 14px;
+    background: #f9fbfa;
+    border: 1px solid #e1e7e5;
+    border-radius: 11px;
+    color: #17201f;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    outline: none;
+    resize: vertical;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rating-form-group textarea::placeholder {
+    color: #a1aaa8;
+}
+
+.rating-form-group textarea:hover {
+    background: #ffffff;
+    border-color: #cfd8d5;
+}
+
+.rating-form-group textarea:focus {
+    background: #ffffff;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.07);
+}
+
+/* ==========================================
+   DONJA DUGMAD
+   ========================================== */
+
+.btn-submit-rating {
+    width: 100%;
+    margin-top: 11px;
+    padding: 11px 15px;
+    background: #0f766e;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-submit-rating:hover {
+    background: #115e59;
+    transform: translateY(-1px);
+    box-shadow: 0 7px 18px rgba(15, 118, 110, 0.16);
+}
+
+.btn-submit-rating:active {
+    transform: translateY(0);
+}
+
+.btn-submit-rating:disabled {
+    background: #cbd5d3;
+    color: #f8faf9;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
 }

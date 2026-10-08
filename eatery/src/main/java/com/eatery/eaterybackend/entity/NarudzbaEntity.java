@@ -91,4 +91,14 @@ public class NarudzbaEntity {
             this.pin = String.format("%04d", new Random().nextInt(10000));
         }
     }
+    // Dodajte na dno klase NarudzbaEntity.java:
+    @com.fasterxml.jackson.annotation.JsonProperty("restoranId")
+    public Long getRestoranIdForJson() {
+        return this.restoran != null ? this.restoran.getId() : null;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("restoranNaziv")
+    public String getRestoranNazivForJson() {
+        return this.restoran != null ? this.restoran.getKorisnickoIme() : null;
+    }
 }

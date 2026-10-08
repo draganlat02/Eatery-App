@@ -1,37 +1,32 @@
 package com.eatery.eaterybackend.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class NarudzbaDTO {
+    private Long id;
     private Long kupacId;
     private Long restoranId;
+    private String restoranNaziv;
+    private String sifra;
+    private String status;
     private String adresaDostave;
     private BigDecimal ukupnaCijena;
     private List<StavkaDTO> stavke;
 
-    @Getter
-    @Setter
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class StavkaDTO {
         private Long jeloId;
         private String tipStavke; // "JELO" ili "VRECICA"
         private Integer kolicina;
         private BigDecimal cijena;
-
-        public Long getJeloId() { return jeloId; }
-        public void setJeloId(Long jeloId) { this.jeloId = jeloId; }
-
-        public String getTipStavke() { return tipStavke; }
-        public void setTipStavke(String tipStavke) { this.tipStavke = tipStavke; }
-
-        public Integer getKolicina() { return kolicina; }
-        public void setKolicina(Integer kolicina) { this.kolicina = kolicina; }
-
-        public BigDecimal getCijena() { return cijena; }
-        public void setCijena(BigDecimal cijena) { this.cijena = cijena; }
     }
 }

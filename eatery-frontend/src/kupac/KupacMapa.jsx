@@ -13,6 +13,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './KupacMapa.css';
 import { formatRadnoVrijeme, statusRadnogVremena } from './radnoVrijeme';
+import StarRating from '../components/StarRating';
 
 // =========================================================
 // MODERNE IKONE
@@ -225,7 +226,7 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
                         }}
                     />
 
-                    {/* RESTORANI (Samo oni sa ispravnim koordinate) */}
+                    {/* RESTORANI (Samo oni sa ispravnim koordinatama) */}
                     {restorani
                         .filter((r) => r.lat != null && r.lng != null)
                         .map((restoran) => (
@@ -320,61 +321,78 @@ const KupacMapa = ({ onIzaberiRestoran }) => {
                     </div>
 
                     <div className="kupac-map-restaurant-grid">
-                        {restorani.map((restoran) => (
-                            <article
-                                className="kupac-map-restaurant-card"
-                                key={restoran.id}
-                                onClick={() => otvoriRestoran(restoran)}
-                            >
-                                <div className="map-card-icon">🍽️</div>
+                        {restorani.map((restoran) => {
+    // Čitanje ocjene direktno iz objekta
+    const numericRating = Number(restoran.prosjecnaOcjena) || 0;
+    const brojOcjena = Number(restoran.ukupanBrojOcjena) || 0;
+    const hasRating = numericRating > 0;
 
-                                <div className="map-card-info">
-                                    <h4>
-                                        {restoran.nazivObjekta || restoran.naziv || 'Restoran'}
-                                    </h4>
+    return (
+        <article
+            className="kupac-map-restaurant-card"
+            key={restoran.id}
+            onClick={() => otvoriRestoran(restoran)}
+        >
+            <div className="map-card-icon">🍽️</div>
 
-                                    <p className="map-card-address">
-                                        <span>📍</span>
-                                        {restoran.adresa || 'Adresa nije unesena'}
-                                    </p>
+            <div className="map-card-info">
+                <h4>{restoran.nazivObjekta || restoran.naziv || 'Restoran'}</h4>
 
-                                    <p className="map-card-hours">
-                                        {(() => {
-                                            const status = statusRadnogVremena(
-                                                restoran.radnoVrijemeOd,
-                                                restoran.radnoVrijemeDo
-                                            );
-                                            const hours = formatRadnoVrijeme(
-                                                restoran.radnoVrijemeOd,
-                                                restoran.radnoVrijemeDo
-                                            );
-                                            return hours
-                                                ? `${status.label} · ${hours}`
-                                                : status.label;
-                                        })()}
-                                    </p>
+                <div className="map-card-rating">
+                    <StarRating
+                        rating={numericRating}
+                        readOnly={true}
+                    />
+                    <span>
+                        {hasRating
+                            ? `${numericRating.toFixed(1)}${
+                                  brojOcjena > 0 ? ` (${brojOcjena})` : ''
+                              }`
+                            : 'Nema ocjena'}
+                    </span>
+                </div>
 
-                                    <div className="map-card-bottom">
-                                        <span className="map-card-distance">
-                                            <span>↗</span>
-                                            {restoran.udaljenostKm != null
-                                                ? Number(restoran.udaljenostKm).toFixed(1)
-                                                : '0.0'}{' '}
-                                            km
-                                        </span>
+                <p className="map-card-address">
+                    <span>📍</span>
+                    {restoran.adresa || 'Adresa nije unesena'}
+                </p>
 
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                otvoriRestoran(restoran);
-                                            }}
-                                        >
-                                            Pogledaj meni <span>→</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
+                <p className="map-card-hours">
+                    {(() => {
+                        const status = statusRadnogVremena(
+                            restoran.radnoVrijemeOd,
+                            restoran.radnoVrijemeDo
+                        );
+                        const hours = formatRadnoVrijeme(
+                            restoran.radnoVrijemeOd,
+                            restoran.radnoVrijemeDo
+                        );
+                        return hours ? `${status.label} · ${hours}` : status.label;
+                    })()}
+                </p>
+
+                <div className="map-card-bottom">
+                    <span className="map-card-distance">
+                        <span>↗</span>
+                        {restoran.udaljenostKm != null
+                            ? Number(restoran.udaljenostKm).toFixed(1)
+                            : '0.0'}{' '}
+                        km
+                    </span>
+
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            otvoriRestoran(restoran);
+                        }}
+                    >
+                        Pogledaj meni <span>→</span>
+                    </button>
+                </div>
+            </div>
+        </article>
+    );
+})}
                     </div>
                 </div>
             )}

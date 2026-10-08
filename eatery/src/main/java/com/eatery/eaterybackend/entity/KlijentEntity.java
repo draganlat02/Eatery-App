@@ -36,4 +36,11 @@ public class KlijentEntity extends KorisnikEntity {
 
     @Column(name = "radno_vrijeme_do")
     private String radnoVrijemeDo;
+
+
+    @Transient
+    private Double prosjecnaOcjena;
+
+    @Transient
+    private Long ukupanBrojOcjena;
 }

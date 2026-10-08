@@ -6,6 +6,7 @@ import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.KlijentEntity;
 import com.eatery.eaterybackend.repository.KlijentRepository;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
+import com.eatery.eaterybackend.repository.RecenzijaRepository; // 1. IMPORT
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -26,8 +27,8 @@ public class RestoranMapaController {
 
     private final KlijentRepository klijentRepository;
     private final KorisnikRepository korisnikRepository;
+    private final RecenzijaRepository recenzijaRepository; // 2. DODATO
 
-    // Pomoćna metoda za provjeru autentičnosti i vlasništva nad restoranom
     private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
         if (authentication == null) return false;
         String ulogovaniUsername = authentication.getName();
@@ -41,7 +42,6 @@ public class RestoranMapaController {
             @RequestBody UpdateKlijentProfilDTO dto,
             Authentication authentication) {
 
-        // JWT PROVJERA: Samo restoran kojem pripada nalog može ažurirati svoju lokaciju
         if (!isRestoranOvlascen(restoranId, authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Nemate dozvolu da mijenjate lokaciju ovog restorana!");
@@ -55,7 +55,6 @@ public class RestoranMapaController {
         Double lat = null;
         Double lng = null;
 
-        // 1. Ako koordinate nisu proslijeđene, tražimo ih preko Nominatim geokodera
         if (dto.getLat() != null && dto.getLng() != null) {
             lat = dto.getLat();
             lng = dto.getLng();
@@ -82,13 +81,11 @@ public class RestoranMapaController {
             }
         }
 
-        // 2. STRIKTNA PROVJERA: Ako Nominatim nije pronašao adresu na mapi, prekidamo i vraćamo grešku
         if (lat == null || lng == null) {
             return ResponseEntity.badRequest()
                     .body("Unesena adresa nije pronađena na mapi. Molimo unesite tačnu adresu.");
         }
 
-        // 3. Upis u bazu samo ako je adresa validna
         int count = klijentRepository.postojiKlijent(restoranId);
 
         if (count > 0) {
@@ -137,6 +134,18 @@ public class RestoranMapaController {
             if (Boolean.TRUE.equals(r.getAktiviran()) && r.getLat() != null && r.getLng() != null) {
                 double dist = izracunajUdaljenostKm(lat, lng, r.getLat(), r.getLng());
                 if (dist <= radijusKm) {
+
+                    // 3. DOBAVLJANJE OCJENA IZ RECENZIJA REPOSITORY-JA
+                    Double prosjecnaOcjena = recenzijaRepository.getProsjecnaOcjenaZaRestoran(r.getId());
+                    Long ukupanBrojOcjena = recenzijaRepository.countByRestoranId(r.getId());
+
+                    if (prosjecnaOcjena == null) {
+                        prosjecnaOcjena = 0.0;
+                    }
+                    if (ukupanBrojOcjena == null) {
+                        ukupanBrojOcjena = 0L;
+                    }
+
                     rezultat.add(new RestoranMapaDTO(
                             r.getId(),
                             r.getNazivObjekta(),
@@ -145,7 +154,9 @@ public class RestoranMapaController {
                             r.getLng(),
                             Math.round(dist * 10.0) / 10.0,
                             r.getRadnoVrijemeOd(),
-                            r.getRadnoVrijemeDo()
+                            r.getRadnoVrijemeDo(),
+                            prosjecnaOcjena,     // Proslijeđeno u DTO
+                            ukupanBrojOcjena      // Proslijeđeno u DTO
                     ));
                 }
             }
