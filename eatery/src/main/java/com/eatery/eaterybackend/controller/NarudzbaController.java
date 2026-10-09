@@ -1,6 +1,5 @@
 package com.eatery.eaterybackend.controller;
 
-import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -33,6 +32,7 @@ import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
+import com.eatery.eaterybackend.service.RadnoVrijemeService;
 import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
@@ -47,6 +47,7 @@ public class NarudzbaController {
     private final KlijentRepository klijentRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final StavkaNazivResolver stavkaNazivResolver;
+    private final RadnoVrijemeService radnoVrijemeService;
 
     public NarudzbaController(NarudzbaRepository narudzbaRepository,
                               KorisnikRepository korisnikRepository,
@@ -54,7 +55,8 @@ public class NarudzbaController {
                               VrecicaIznenadjenjaRepository vrecicaIznenadjenjaRepository,
                               KlijentRepository klijentRepository,
                               SimpMessagingTemplate messagingTemplate,
-                              StavkaNazivResolver stavkaNazivResolver) {
+                              StavkaNazivResolver stavkaNazivResolver,
+                              RadnoVrijemeService radnoVrijemeService) {
                                 
         this.narudzbaRepository = narudzbaRepository;
         this.korisnikRepository = korisnikRepository;
@@ -63,41 +65,7 @@ public class NarudzbaController {
         this.klijentRepository = klijentRepository;
         this.messagingTemplate = messagingTemplate;
         this.stavkaNazivResolver = stavkaNazivResolver;
-    }
-
-    private boolean jeRestoranOtvoren(String od, String doVrijeme) {
-
-        if (od == null || doVrijeme == null || od.isBlank() || doVrijeme.isBlank()) {
-
-            return true;
-        }
-        try {
-
-            LocalTime from = LocalTime.parse(normalizujVrijeme(od));
-            LocalTime to = LocalTime.parse(normalizujVrijeme(doVrijeme));
-            LocalTime sada = LocalTime.now();
-
-            if (from.equals(to)) {
-                return true;
-            }
-            if (from.isBefore(to)) {
-
-                return !sada.isBefore(from) && sada.isBefore(to);
-            } else {
-
-                return !sada.isBefore(from) || sada.isBefore(to);
-            }
-        } catch (Exception e) {
-
-            return true;
-        }
-    }
-
-    private String normalizujVrijeme(String vrijeme) {
-
-        String v = vrijeme.trim();
-
-        return v.length() >= 5 ? v.substring(0, 5) : v;
+        this.radnoVrijemeService = radnoVrijemeService;
     }
 
     @PostMapping
@@ -117,13 +85,10 @@ public class NarudzbaController {
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen sa ID: " + dto.getRestoranId()));
 
         KlijentEntity klijentRestorana = klijentRepository.findById(dto.getRestoranId()).orElse(null);
-        
-        if (klijentRestorana != null
-                && !jeRestoranOtvoren(klijentRestorana.getRadnoVrijemeOd(), klijentRestorana.getRadnoVrijemeDo())) {
-            
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Restoran je trenutno zatvoren. Narudžbe su moguće samo u radno vrijeme ("
-                            + klijentRestorana.getRadnoVrijemeOd() + " - " + klijentRestorana.getRadnoVrijemeDo() + ").");
+
+        if (!radnoVrijemeService.jeOtvoren(klijentRestorana)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", radnoVrijemeService.porukaZatvoren(klijentRestorana)));
         }
 
         NarudzbaEntity narudzba = new NarudzbaEntity();

@@ -1,5 +1,17 @@
 .klijent-profil {
+    --primary: #0f766e;
+    --primary-dark: #115e59;
+    --primary-light: #e7f5f3;
+    --text: #17201f;
+    --text-secondary: #687573;
+    --text-light: #94a09e;
+    --surface: #ffffff;
+    --border: #e5e9e8;
+    --danger: #dc5a5a;
+
     max-width: 860px;
+    padding: 12px 0 30px;
+    color: var(--text);
 }
 
 .klijent-profil-heading {
@@ -127,7 +139,12 @@
     color: #fff;
     font-size: 14px;
     font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
+}
+
+.klijent-profil-submit:hover:not(:disabled) {
+    background: var(--primary-dark);
 }
 
 .klijent-profil-submit:disabled {

@@ -33,6 +33,20 @@ const dohvatiPodatkeOOcjeni = (restoran) => {
     return { ocjena, brojOcjena };
 };
 
+const porukaZatvorenogRestorana = (status) => {
+    if (status?.hours) {
+        return `Restoran je trenutno zatvoren. Narudžba nije moguća. Radno vrijeme: ${status.hours}.`;
+    }
+    return 'Restoran je trenutno zatvoren. Narudžba nije moguća.';
+};
+
+const citajGreskuApi = (err, fallback) => {
+    const data = err?.response?.data;
+    if (typeof data === 'string' && data.trim()) return data;
+    if (data?.message) return data.message;
+    return fallback || err?.message || 'Greška prilikom slanja narudžbe.';
+};
+
 function KupacPanel({ user, onLogout, onUserUpdate }) {
 
     const [restorani, setRestorani] = useState([]);
@@ -46,6 +60,7 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     const [notifikacija, setNotifikacija] = useState(null);
     const [poslednjiPin, setPoslednjiPin] = useState(null);
     const [aktivnaStranica, setAktivnaStranica] = useState('restorani');
+    const [narudzbaGreska, setNarudzbaGreska] = useState('');
 
     useEffect(() => {
         API.get('/kupac/restorani')
@@ -81,12 +96,20 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     }, [notifikacija]);
 
     const izaberiRestoran = async (restoran) => {
-        setIzabraniRestoran(restoran);
+        const rId = restoran.id || restoran.idKorisnika;
+        const izListe = restorani.find(x => (x.id || x.idKorisnika) === rId);
+        setIzabraniRestoran({
+            ...izListe,
+            ...restoran,
+            nazivObjekta: restoran.nazivObjekta || restoran.naziv || izListe?.nazivObjekta,
+            radnoVrijemeOd: restoran.radnoVrijemeOd ?? izListe?.radnoVrijemeOd ?? '',
+            radnoVrijemeDo: restoran.radnoVrijemeDo ?? izListe?.radnoVrijemeDo ?? ''
+        });
         setKorpa([]);
+        setNarudzbaGreska('');
         setAktivnaStranica('restorani');
 
         try {
-            const rId = restoran.id || restoran.idKorisnika;
             const res = await API.get(`/restoran/${rId}/jela`);
             setJela(res.data);
         } catch (err) {
@@ -117,7 +140,16 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
 
     const rukujDodavanjemVrecice = (vrecica) => {
         if (!izabraniRestoran || (izabraniRestoran.id !== vrecica.restoran?.id && izabraniRestoran.idKorisnika !== vrecica.restoran?.idKorisnika)) {
-            setIzabraniRestoran(vrecica.restoran);
+            const restoran = vrecica.restoran || {};
+            const rId = restoran.id || restoran.idKorisnika;
+            const izListe = restorani.find(x => (x.id || x.idKorisnika) === rId);
+            setIzabraniRestoran({
+                ...izListe,
+                ...restoran,
+                nazivObjekta: restoran.nazivObjekta || restoran.naziv || izListe?.nazivObjekta,
+                radnoVrijemeOd: restoran.radnoVrijemeOd ?? izListe?.radnoVrijemeOd ?? '',
+                radnoVrijemeDo: restoran.radnoVrijemeDo ?? izListe?.radnoVrijemeDo ?? ''
+            });
         }
 
         const vrecicaJelo = {
@@ -138,7 +170,13 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     const posaljiNarudzbu = async (e) => {
         if (e) e.preventDefault();
         if (korpa.length === 0) return alert('Vaša korpa je prazna!');
-        if (restoranZatvoren) return alert('Restoran je trenutno zatvoren.');
+        const statusSada = statusRadnogVremena(izabraniRestoran?.radnoVrijemeOd, izabraniRestoran?.radnoVrijemeDo);
+        if (statusSada.open === false) {
+            const tekst = porukaZatvorenogRestorana(statusSada);
+            setNarudzbaGreska(tekst);
+            setNotifikacija({ naslov: 'Restoran je zatvoren', tekst: 'Narudžba nije moguća.' });
+            return;
+        }
 
         const kId = user?.id || user?.idKorisnika;
         const rId = izabraniRestoran?.id || izabraniRestoran?.idKorisnika;
@@ -185,10 +223,17 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
             alert(noviPin ? `🎉 Narudžba poslata! PIN za preuzimanje: ${noviPin}` : '🎉 Narudžba uspešno poslata!');
             setKorpa([]);
             setAdresa('');
+            setNarudzbaGreska('');
             setOsveziNarudzbe(prev => prev + 1);
         } catch (err) {
             console.error('Greška:', err.response?.data || err.message);
-            alert(`Greška prilikom slanja: ${err.response?.data?.message || err.message}`);
+            const tekst = citajGreskuApi(err, 'Greška prilikom slanja narudžbe.');
+            setNarudzbaGreska(tekst);
+            if (/zatvoren/i.test(tekst)) {
+                setNotifikacija({ naslov: 'Restoran je zatvoren', tekst: 'Narudžba nije moguća.' });
+            } else {
+                alert(`Greška prilikom slanja: ${tekst}`);
+            }
         }
     };
 
@@ -392,6 +437,11 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                                 </span>
                                             )}
                                         </div>
+                                        {statusIzabranog.hours && (
+                                            <p className={statusIzabranog.open === false ? 'eatery-status-zatvoren' : 'eatery-status-otvoren'}>
+                                                {statusIzabranog.label} · {statusIzabranog.hours}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="header-cart-info">
@@ -509,7 +559,12 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                                                         onChange={e => setAdresa(e.target.value)}
                                                         required
                                                     />
-                                                    <button type="submit" className="order-button" disabled={restoranZatvoren}>
+                                                    {(restoranZatvoren || narudzbaGreska) && (
+                                                        <div className="eatery-zatvoreno-upozorenje">
+                                                            {narudzbaGreska || porukaZatvorenogRestorana(statusIzabranog)}
+                                                        </div>
+                                                    )}
+                                                    <button type="submit" className="order-button">
                                                         Potvrdi i naruči <span>→</span>
                                                     </button>
                                                 </form>

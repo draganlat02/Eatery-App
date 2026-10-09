@@ -35,6 +35,7 @@ import com.eatery.eaterybackend.repository.KupacRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
 import com.eatery.eaterybackend.dto.RestoranOcjenaDTO;
+import com.eatery.eaterybackend.service.RadnoVrijemeService;
 import com.eatery.eaterybackend.service.RecenzijaService;
 import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
@@ -51,6 +52,7 @@ public class KupacController {
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
     private final RecenzijaService recenzijaService;
     private final StavkaNazivResolver stavkaNazivResolver;
+    private final RadnoVrijemeService radnoVrijemeService;
 
     public KupacController(KorisnikRepository korisnikRepository,
                            KupacRepository kupacRepository,
@@ -59,7 +61,8 @@ public class KupacController {
                            NarudzbaRepository narudzbaRepository,
                            StavkaNarudzbeRepository stavkaNarudzbeRepository,
                            RecenzijaService recenzijaService,
-                           StavkaNazivResolver stavkaNazivResolver) {
+                           StavkaNazivResolver stavkaNazivResolver,
+                           RadnoVrijemeService radnoVrijemeService) {
                             
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
@@ -69,6 +72,7 @@ public class KupacController {
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
         this.recenzijaService = recenzijaService;
         this.stavkaNazivResolver = stavkaNazivResolver;
+        this.radnoVrijemeService = radnoVrijemeService;
     }
 
     private boolean isKorisnikOvlascen(Long trazeniKorisnikId, Authentication authentication) {
@@ -203,6 +207,12 @@ public class KupacController {
 
         KorisnikEntity restoran = korisnikRepository.findById(dto.getRestoranId())
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen sa ID: " + dto.getRestoranId()));
+
+        KlijentEntity klijentRestorana = klijentRepository.findById(dto.getRestoranId()).orElse(null);
+        if (!radnoVrijemeService.jeOtvoren(klijentRestorana)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", radnoVrijemeService.porukaZatvoren(klijentRestorana)));
+        }
 
         NarudzbaEntity narudzba = new NarudzbaEntity();
         narudzba.setKupac(ulogovaniKupac);

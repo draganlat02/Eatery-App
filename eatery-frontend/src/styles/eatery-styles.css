@@ -146,3 +146,18 @@
     align-items: center;
     gap: 8px;
 }
+
+.eatery-status-otvoren,
+.eatery-status-zatvoren {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.eatery-status-otvoren {
+    color: #0f766e;
+}
+
+.eatery-status-zatvoren {
+    color: #b42318;
+}
