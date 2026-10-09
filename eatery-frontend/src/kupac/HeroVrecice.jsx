@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
+import { statusPreuzimanjaVrecice } from './radnoVrijeme';
 import './HeroVrecice.css';
 
 function HeroVrecice({ onDodajUVrecicu }) {
@@ -90,6 +91,15 @@ function HeroVrecice({ onDodajUVrecicu }) {
                         const kolicina = Number(v.kolicina) || 0;
                         const isRasprodano = kolicina <= 0;
 
+                        // Vremenski prozor za preuzimanje koji je definisao restoran (npr. 18:00 – 19:30)
+                        const imaSatnicu = Boolean(v.vrijemePreuzimanjaOd && v.vrijemePreuzimanjaDo);
+                        const statusPreuzimanja = statusPreuzimanjaVrecice(
+                            v.vrijemePreuzimanjaOd,
+                            v.vrijemePreuzimanjaDo
+                        );
+                        const preuzimanjeIsteklo = statusPreuzimanja === 'isteklo';
+                        const nedostupno = isRasprodano || preuzimanjeIsteklo;
+
                         return (
                             <article className="surprise-card" key={v.id}>
                                 {/* IMAGE / ICON AREA */}
@@ -120,6 +130,24 @@ function HeroVrecice({ onDodajUVrecicu }) {
                                         {v.opis ||
                                             'Odabrana hrana iz restorana po posebnoj cijeni.'}
                                     </p>
+
+                                    {imaSatnicu && (
+                                        <div className={`surprise-pickup ${statusPreuzimanja || ''}`}>
+                                            <span className="surprise-pickup-icon">🕒</span>
+                                            <div>
+                                                <strong>
+                                                    Preuzimanje danas {v.vrijemePreuzimanjaOd} – {v.vrijemePreuzimanjaDo}
+                                                </strong>
+                                                <span>
+                                                    {statusPreuzimanja === 'sada'
+                                                        ? 'Preuzimanje je u toku, možete doći odmah'
+                                                        : preuzimanjeIsteklo
+                                                        ? 'Preuzimanje je za danas završeno'
+                                                        : 'Dobićete obavještenje kad možete doći'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {v.alergijskaUpozorenja && (
                                         <div className="surprise-allergy">
@@ -152,18 +180,22 @@ function HeroVrecice({ onDodajUVrecicu }) {
                                     {/* BUTTON */}
                                     <button
                                         className={`surprise-add-button ${
-                                            isRasprodano ? 'disabled' : ''
+                                            nedostupno ? 'disabled' : ''
                                         }`}
                                         onClick={() => onDodajUVrecicu(v)}
-                                        disabled={isRasprodano}
+                                        disabled={nedostupno}
                                     >
                                         <span className="bag-icon">
-                                            {isRasprodano ? '🚫' : '🛒'}
+                                            {nedostupno ? '🚫' : '🛒'}
                                         </span>
 
-                                        {isRasprodano ? 'Rasprodano' : 'Dodaj u korpu'}
+                                        {isRasprodano
+                                            ? 'Rasprodano'
+                                            : preuzimanjeIsteklo
+                                            ? 'Preuzimanje završeno'
+                                            : 'Dodaj u korpu'}
 
-                                        {!isRasprodano && (
+                                        {!nedostupno && (
                                             <span className="button-arrow">→</span>
                                         )}
                                     </button>

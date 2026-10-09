@@ -366,3 +366,33 @@
         align-items: flex-start;
     }
 }
+
+.customer-order-pickup {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--background, #f7f8f7);
+    color: var(--text-secondary, #687573);
+    font-size: 13px;
+}
+
+.customer-order-pickup em {
+    font-style: normal;
+    font-size: 12px;
+}
+
+.customer-order-pickup.uskoro {
+    background: var(--primary-light, #e7f5f3);
+    color: var(--primary-dark, #115e59);
+}
+
+.customer-order-pickup.sada {
+    background: #ecfdf3;
+    color: #047857;
+    font-weight: 600;
+}

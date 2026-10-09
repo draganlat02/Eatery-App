@@ -193,6 +193,8 @@ public class RestoranController {
             dto.setUkupnaCijena(n.getUkupnaCijena());
             dto.setAdresaDostave(n.getAdresaDostave());
             dto.setVrijemeKreiranja(n.getVrijemeIDatum());
+            dto.setPreuzimanjeOd(n.getPreuzimanjeOd());
+            dto.setPreuzimanjeDo(n.getPreuzimanjeDo());
 
             List<StavkaNarudzbeEntity> stavkeEnt = n.getStavke() != null ? n.getStavke() : List.of();
             dto.setStavke(stavkeEnt.stream().map(s -> {

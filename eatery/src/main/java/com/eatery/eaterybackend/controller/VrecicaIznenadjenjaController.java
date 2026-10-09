@@ -5,12 +5,14 @@ import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.VrecicaIznenadjenjaEntity;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
+import com.eatery.eaterybackend.service.PreuzimanjeVreciceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vrecice")
@@ -19,11 +21,14 @@ public class VrecicaIznenadjenjaController {
 
     private final VrecicaIznenadjenjaRepository vrecicaRepository;
     private final KorisnikRepository korisnikRepository;
+    private final PreuzimanjeVreciceService preuzimanjeVreciceService;
 
     public VrecicaIznenadjenjaController(VrecicaIznenadjenjaRepository vrecicaRepository,
-                                         KorisnikRepository korisnikRepository) {
+                                         KorisnikRepository korisnikRepository,
+                                         PreuzimanjeVreciceService preuzimanjeVreciceService) {
         this.vrecicaRepository = vrecicaRepository;
         this.korisnikRepository = korisnikRepository;
+        this.preuzimanjeVreciceService = preuzimanjeVreciceService;
     }
 
     // Pomoćna metoda za provjeru autorizacije restorana
@@ -58,6 +63,13 @@ public class VrecicaIznenadjenjaController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da objavljujete vrećice u ime ovog restorana!");
         }
 
+        // Restoran mora definisati satnicu preuzimanja (npr. 18:00 – 19:30)
+        String greskaSatnice = preuzimanjeVreciceService.validirajSatnicu(
+                dto.getVrijemePreuzimanjaOd(), dto.getVrijemePreuzimanjaDo());
+        if (greskaSatnice != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", greskaSatnice));
+        }
+
         KorisnikEntity restoran = korisnikRepository.findById(restoranId)
                 .orElseThrow(() -> new RuntimeException("Restoran nije pronađen"));
 
@@ -73,8 +85,8 @@ public class VrecicaIznenadjenjaController {
                         ? dto.getTezinaKg()
                         : java.math.BigDecimal.ONE
         );
-        vrecica.setVrijemePreuzimanjaOd(dto.getVrijemePreuzimanjaOd());
-        vrecica.setVrijemePreuzimanjaDo(dto.getVrijemePreuzimanjaDo());
+        vrecica.setVrijemePreuzimanjaOd(preuzimanjeVreciceService.normalizuj(dto.getVrijemePreuzimanjaOd()));
+        vrecica.setVrijemePreuzimanjaDo(preuzimanjeVreciceService.normalizuj(dto.getVrijemePreuzimanjaDo()));
         vrecica.setAktivna(dto.getAktivna() != null ? dto.getAktivna() : true);
         vrecica.setAlergijskaUpozorenja(
                 dto.getAlergijskaUpozorenja() != null && !dto.getAlergijskaUpozorenja().isBlank()

@@ -561,3 +561,51 @@
     transform: none; /* onemogućava hover animaciju ako postoji */
 }
 }
+
+.surprise-pickup {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--primary-light, #e7f5f3);
+    color: var(--primary-dark, #115e59);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.surprise-pickup-icon {
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.surprise-pickup strong {
+    display: block;
+    font-size: 12px;
+}
+
+.surprise-pickup.sada {
+    background: #ecfdf3;
+    color: #047857;
+}
+
+.surprise-pickup.isteklo {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.surprise-add-button:disabled,
+.surprise-add-button.disabled {
+    background-color: #ccc;
+    border-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.surprise-add-button:disabled:hover {
+    background-color: #ccc;
+    box-shadow: none;
+    transform: none;
+}
