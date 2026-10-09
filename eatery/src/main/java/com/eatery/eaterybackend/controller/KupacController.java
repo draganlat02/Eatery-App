@@ -34,7 +34,9 @@ import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.KupacRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
-import com.eatery.eaterybackend.repository.RecenzijaRepository;
+import com.eatery.eaterybackend.dto.RestoranOcjenaDTO;
+import com.eatery.eaterybackend.service.RecenzijaService;
+import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
 @RestController
 @RequestMapping("/api/kupac")
@@ -47,7 +49,8 @@ public class KupacController {
     private final JeloRepository jeloRepository;
     private final NarudzbaRepository narudzbaRepository;
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
-    private final RecenzijaRepository recenzijaRepository;
+    private final RecenzijaService recenzijaService;
+    private final StavkaNazivResolver stavkaNazivResolver;
 
     public KupacController(KorisnikRepository korisnikRepository,
                            KupacRepository kupacRepository,
@@ -55,7 +58,8 @@ public class KupacController {
                            JeloRepository jeloRepository,
                            NarudzbaRepository narudzbaRepository,
                            StavkaNarudzbeRepository stavkaNarudzbeRepository,
-                           RecenzijaRepository recenzijaRepository) {
+                           RecenzijaService recenzijaService,
+                           StavkaNazivResolver stavkaNazivResolver) {
                             
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
@@ -63,7 +67,8 @@ public class KupacController {
         this.jeloRepository = jeloRepository;
         this.narudzbaRepository = narudzbaRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
-        this.recenzijaRepository=recenzijaRepository;
+        this.recenzijaService = recenzijaService;
+        this.stavkaNazivResolver = stavkaNazivResolver;
     }
 
     private boolean isKorisnikOvlascen(Long trazeniKorisnikId, Authentication authentication) {
@@ -174,11 +179,9 @@ public class KupacController {
         List<KlijentEntity> restorani = klijentRepository.findAll().stream()
                 .filter(k -> Boolean.TRUE.equals(k.getAktiviran()))
                 .peek(k -> {
-                    Double prosjek = recenzijaRepository.getProsjecnaOcjenaZaRestoran(k.getId());
-                    Long ukupno = recenzijaRepository.countByRestoranId(k.getId()); // <--- Illi countByRestoranId balasi
-
-                    k.setProsjecnaOcjena(prosjek != null ? prosjek : 0.0);
-                    k.setUkupanBrojOcjena(ukupno != null ? ukupno : 0L);
+                    RestoranOcjenaDTO ocjena = recenzijaService.ocjenaZaRestoran(k.getId());
+                    k.setProsjecnaOcjena(ocjena.getProsjecnaOcjena());
+                    k.setUkupanBrojOcjena(ocjena.getUkupanBrojOcjena());
                 })
                 .toList();
 
@@ -220,6 +223,8 @@ public class KupacController {
             stavka.setIdNarudzbe(sacuvanaNarudzba.getId());
             stavka.setIdJela(sDTO.getJeloId());
             stavka.setKolicina(sDTO.getKolicina());
+            stavka.setTipStavke("JELO");
+            stavka.setNaziv(jelo.getNaziv());
 
             BigDecimal cijenaStavke = jelo.getCijena().multiply(BigDecimal.valueOf(sDTO.getKolicina()));
             stavka.setCijena(cijenaStavke);
@@ -243,6 +248,7 @@ public class KupacController {
     }
 
     @GetMapping("/narudzbe/{kupacId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getNarudzbeKupca(@PathVariable Long kupacId, Authentication authentication) {
 
         if (!isKorisnikOvlascen(kupacId, authentication)) {
@@ -250,7 +256,11 @@ public class KupacController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu da gledate narudžbe drugog kupca!");
         }
 
-        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacIdOrderByIdDesc(kupacId);
+        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacIdWithStavke(kupacId);
+        List<StavkaNarudzbeEntity> sveStavke = narudzbe.stream()
+                .flatMap(n -> (n.getStavke() != null ? n.getStavke() : List.<StavkaNarudzbeEntity>of()).stream())
+                .toList();
+        var katalog = stavkaNazivResolver.katalogZa(sveStavke);
 
         List<MojeNarudzbeDTO> result = narudzbe.stream().map(n -> {
             MojeNarudzbeDTO dto = new MojeNarudzbeDTO();
@@ -267,18 +277,14 @@ public class KupacController {
                 dto.setRestoranNaziv(n.getRestoran().getKorisnickoIme());
             }
 
-            List<StavkaNarudzbeEntity> stavkeEnt = stavkaNarudzbeRepository.findByIdNarudzbe(n.getId());
-            List<MojeNarudzbeDTO.StavkaPregledDTO> stavkeDTO = stavkeEnt.stream().map(s -> {
-
+            List<StavkaNarudzbeEntity> stavkeEnt = n.getStavke() != null ? n.getStavke() : List.of();
+            dto.setStavke(stavkeEnt.stream().map(s -> {
                 MojeNarudzbeDTO.StavkaPregledDTO sd = new MojeNarudzbeDTO.StavkaPregledDTO();
                 sd.setKolicina(s.getKolicina());
                 sd.setCijena(s.getCijena());
-                jeloRepository.findById(s.getIdJela()).ifPresent(j -> sd.setNazivJela(j.getNaziv()));
+                sd.setNazivJela(stavkaNazivResolver.naziv(s, katalog));
                 return sd;
-
-            }).toList();
-
-            dto.setStavke(stavkeDTO);
+            }).toList());
 
             return dto;
         }).toList();

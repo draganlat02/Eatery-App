@@ -19,8 +19,9 @@ public class KategorijaEntity {
     @Column(nullable = false)
     private String naziv;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_korisnika", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "sifra"})
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private KorisnikEntity restoran;
 }

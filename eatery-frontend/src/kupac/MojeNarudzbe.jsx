@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import './MojeNarudzbe.css';
 
 const NARUDZBI_PO_STRANICI = 5;
 
@@ -167,60 +168,40 @@ const MojeNarudzbe = ({ kupacId }) => {
                         </div>
 
                         <ul className="customer-order-items">
-                            {n.stavke && n.stavke.map((s, idx) => (
+                            {n.stavke && n.stavke.length > 0 ? n.stavke.map((s, idx) => (
                                 <li key={idx}>
-                                    <span>{s.nazivJela || 'Jelo'} × {s.kolicina}</span>
-                                    <strong>{s.cijena} KM</strong>
+                                    <span>
+                                        {s.nazivJela || s.naziv || (s.tipStavke === 'VRECICA' ? 'Vrećica iznenađenja' : 'Jelo')}
+                                        {s.kolicina ? ` × ${s.kolicina}` : ''}
+                                    </span>
+                                    <strong>
+                                        {s.cijena != null ? `${Number(s.cijena).toFixed(2)} KM` : ''}
+                                    </strong>
                                 </li>
-                            ))}
+                            )) : (
+                                <li className="customer-order-items-empty">Nema stavki narudžbe</li>
+                            )}
                         </ul>
 
                         <div className="customer-order-footer">
                             <div>
                                 <span>{n.adresaDostave || 'Preuzimanje u restoranu'}</span>
-                                <strong style={{ display: 'block', marginTop: '4px' }}>{n.ukupnaCijena} KM</strong>
+                                <strong className="customer-order-total">{n.ukupnaCijena} KM</strong>
                             </div>
 
                             {isZavrseno && (
                                 isVecOcjenjeno ? (
-                                    /* SIV / ZELENI ONEMOGUĆENI INDIKATOR DA JE VEĆ OCIJENJENO */
-                                    <button 
-                                        type="button"
-                                        disabled={true}
-                                        style={{
-                                            padding: '8px 14px',
-                                            background: '#f0fdf9',
-                                            color: '#087f6d',
-                                            border: '1px solid #ccefe7',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            cursor: 'not-allowed',
-                                            opacity: 0.85
-                                        }}
-                                    >
+                                    <button type="button" className="badge-rated" disabled>
                                         ✓ Ocijenjeno
                                     </button>
                                 ) : (
-                                    /* AKTIVNO DUGME AKO NIJE OCIJENJENO */
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
+                                        className={isOtvoreno ? 'btn-rate-cancel' : 'btn-rate-open'}
                                         onClick={() => {
                                             setActiveOrderId(isOtvoreno ? null : n.id);
                                             setOcjena(5);
                                             setKomentar('');
-                                        }}
-                                        style={{
-                                            padding: '9px 16px',
-                                            background: isOtvoreno ? '#f1f5f9' : '#ffffff',
-                                            color: isOtvoreno ? '#475569' : '#b7791f',
-                                            border: isOtvoreno ? '1px solid #cbd5e1' : '1px solid #ead9b8',
-                                            borderRadius: '9px',
-                                            fontSize: '13px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            boxShadow: isOtvoreno ? 'none' : '0 2px 6px rgba(0,0,0,0.04)'
                                         }}
                                     >
                                         {isOtvoreno ? '✕ Odustani' : '★ Ocijeni'}
@@ -229,93 +210,41 @@ const MojeNarudzbe = ({ kupacId }) => {
                             )}
                         </div>
 
-                        {/* Forma za ocjenjivanje se prikazuje SAMO ako NIJE već ocijenjeno */}
                         {isOtvoreno && !isVecOcjenjeno && (
-                            <form 
-                                onSubmit={(e) => posaljiOcjenu(e, n)}
-                                style={{
-                                    marginTop: '16px',
-                                    padding: '20px',
-                                    background: '#ffffff',
-                                    border: '1px solid #e2e8f0',
-                                    borderTop: '3px solid #0f766e',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.04)'
-                                }}
-                            >
-                                <div style={{ marginBottom: '14px' }}>
-                                    <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px', fontWeight: '700' }}>
-                                        Kako vam se svidjela narudžba?
-                                    </h4>
-                                    <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>
-                                        Ocijenite hranu i uslugu restorana {n.restoranNaziv || ''}
-                                    </p>
+                            <form className="rating-inline-card" onSubmit={(e) => posaljiOcjenu(e, n)}>
+                                <div className="rating-inline-header">
+                                    <h4>Kako vam se svidjela narudžba?</h4>
+                                    <p>Ocijenite hranu i uslugu restorana {n.restoranNaziv || ''}</p>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
+                                <div className="interactive-stars">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button
                                             type="button"
                                             key={star}
+                                            className={`star-btn${star <= (hoverOcjena || ocjena) ? ' filled' : ''}`}
                                             onClick={() => setOcjena(star)}
                                             onMouseEnter={() => setHoverOcjena(star)}
                                             onMouseLeave={() => setHoverOcjena(0)}
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                fontSize: '32px',
-                                                lineHeight: '1',
-                                                cursor: 'pointer',
-                                                padding: '2px',
-                                                color: star <= (hoverOcjena || ocjena) ? '#f59e0b' : '#cbd5e1',
-                                                transition: 'transform 0.1s ease, color 0.1s ease'
-                                            }}
                                         >
                                             ★
                                         </button>
                                     ))}
-                                    <span style={{ marginLeft: '10px', fontWeight: '700', fontSize: '14px', color: '#334155' }}>
+                                    <span className="star-rating-label">
                                         {hoverOcjena || ocjena} / 5
                                     </span>
                                 </div>
 
-                                <div style={{ marginBottom: '14px' }}>
-                                    <textarea 
+                                <div className="rating-form-group">
+                                    <textarea
                                         value={komentar}
                                         onChange={(e) => setKomentar(e.target.value)}
                                         placeholder="Napišite vaše utiske (opcionalno)..."
                                         rows="3"
-                                        style={{
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            padding: '12px',
-                                            border: '1px solid #cbd5e1',
-                                            borderRadius: '8px',
-                                            fontFamily: 'inherit',
-                                            fontSize: '13px',
-                                            outline: 'none',
-                                            resize: 'vertical',
-                                            background: '#f8fafc'
-                                        }}
                                     />
                                 </div>
 
-                                <button 
-                                    type="submit" 
-                                    disabled={slanje}
-                                    style={{
-                                        width: '100%',
-                                        background: slanje ? '#94a3b8' : '#0f766e',
-                                        color: '#ffffff',
-                                        border: 'none',
-                                        padding: '11px',
-                                        borderRadius: '8px',
-                                        fontWeight: '700',
-                                        fontSize: '13px',
-                                        cursor: slanje ? 'not-allowed' : 'pointer',
-                                        transition: 'background 0.2s ease'
-                                    }}
-                                >
+                                <button type="submit" className="btn-submit-rating" disabled={slanje}>
                                     {slanje ? 'Slanje...' : 'Potvrdi i pošalji ocjenu'}
                                 </button>
                             </form>
@@ -324,50 +253,22 @@ const MojeNarudzbe = ({ kupacId }) => {
                 );
             })}
 
-            {/* Paginacija */}
             {ukupnoStranica > 1 && (
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginTop: '24px',
-                    padding: '12px'
-                }}>
+                <div className="orders-pagination">
                     <button
                         type="button"
                         onClick={() => setStranica(p => Math.max(p - 1, 1))}
                         disabled={stranica === 1}
-                        style={{
-                            padding: '8px 16px',
-                            background: stranica === 1 ? '#f1f5f9' : '#0f766e',
-                            color: stranica === 1 ? '#94a3b8' : '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            cursor: stranica === 1 ? 'not-allowed' : 'pointer'
-                        }}
                     >
                         ◄ Prethodna
                     </button>
 
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                        Stranica {stranica} od {ukupnoStranica}
-                    </span>
+                    <span>Stranica {stranica} od {ukupnoStranica}</span>
 
                     <button
                         type="button"
                         onClick={() => setStranica(p => Math.min(p + 1, ukupnoStranica))}
                         disabled={stranica === ukupnoStranica}
-                        style={{
-                            padding: '8px 16px',
-                            background: stranica === ukupnoStranica ? '#f1f5f9' : '#0f766e',
-                            color: stranica === ukupnoStranica ? '#94a3b8' : '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            cursor: stranica === ukupnoStranica ? 'not-allowed' : 'pointer'
-                        }}
                     >
                         Sljedeća ►
                     </button>

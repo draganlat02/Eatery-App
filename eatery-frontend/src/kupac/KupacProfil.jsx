@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
-import './KupacPanel.css';
+import './KupacProfil.css';
 
 function KupacProfil({ kupacId, user, onUserUpdate }) {
     const [profil, setProfil] = useState(null);

@@ -33,7 +33,9 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
     const [statistika, setStatistika] = useState({
         brojProdanihVrecica: 0,
         brojOtkazanihNarudzbi: 0,
-        kgSpaseneHrane: 0
+        kgSpaseneHrane: 0,
+        prosjecnaOcjena: 0,
+        ukupanBrojOcjena: 0
     });
 
     const [novaKategorija, setNovaKategorija] = useState("");
@@ -170,13 +172,20 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
         try {
 const res = await API.get(`/restoran/${stvarniRestoranId}/statistika`);
 
+            const d = res.data || {};
             setStatistika({
                 brojProdanihVrecica:
-                    res.data.brojProdanihVrecica || 0,
+                    d.brojProdanihVrecica || 0,
                 brojOtkazanihNarudzbi:
-                    res.data.brojOtkazanihNarudzbi || 0,
+                    d.brojOtkazanihNarudzbi || 0,
                 kgSpaseneHrane:
-                    res.data.kgSpaseneHrane || 0
+                    d.kgSpaseneHrane || 0,
+                prosjecnaOcjena: Number(
+                    d.prosjecnaOcjena ?? d.prosjecna_ocjena ?? 0
+                ),
+                ukupanBrojOcjena: Number(
+                    d.ukupanBrojOcjena ?? d.ukupan_broj_ocjena ?? 0
+                )
             });
 
         } catch (err) {
@@ -1036,9 +1045,9 @@ const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
                             </h2>
 
                             <p>
-                                Prodane vrećice, otkazane
-                                narudžbe i kilogrami hrane
-                                spašene od bacanja.
+                                Prodane vrećice, ocjene kupaca,
+                                otkazane narudžbe i kilogrami
+                                hrane spašene od bacanja.
                             </p>
 
                         </div>
@@ -1061,6 +1070,32 @@ const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
                             <p>
                                 Vrećice iznenađenja iz
                                 dostavljenih narudžbi.
+                            </p>
+
+                        </article>
+
+
+                        <article className="analytics-card">
+
+                            <span>
+                                Prosječna ocjena
+                            </span>
+
+                            <strong>
+                                {Number(statistika.ukupanBrojOcjena) > 0 || Number(statistika.prosjecnaOcjena) > 0
+                                    ? Number(statistika.prosjecnaOcjena).toFixed(1)
+                                    : '—'}
+                                {(Number(statistika.ukupanBrojOcjena) > 0 || Number(statistika.prosjecnaOcjena) > 0) && (
+                                    <small> / 5</small>
+                                )}
+                            </strong>
+
+                            <p>
+                                {Number(statistika.ukupanBrojOcjena) > 0
+                                    ? `Na osnovu ${statistika.ukupanBrojOcjena} ${Number(statistika.ukupanBrojOcjena) === 1 ? 'ocjene kupaca' : 'ocjena kupaca'}.`
+                                    : Number(statistika.prosjecnaOcjena) > 0
+                                        ? 'Prosjek ocjena kupaca.'
+                                        : 'Još nema ocjena od kupaca.'}
                             </p>
 
                         </article>
@@ -1327,6 +1362,25 @@ const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
                             {Number(n.ukupnaCijena || 0).toFixed(2)} KM
                         </strong>
                     </div>
+                </div>
+
+                <div className="order-items">
+                    <span>Narudžba</span>
+                    <ul>
+                        {n.stavke && n.stavke.length > 0 ? n.stavke.map((s, idx) => (
+                            <li key={idx}>
+                                <span>
+                                    {s.nazivJela || s.naziv || (s.tipStavke === 'VRECICA' ? 'Vrećica iznenađenja' : 'Jelo')}
+                                    {s.kolicina ? ` × ${s.kolicina}` : ''}
+                                </span>
+                                <strong>
+                                    {s.cijena != null ? `${Number(s.cijena).toFixed(2)} KM` : ''}
+                                </strong>
+                            </li>
+                        )) : (
+                            <li>Nema stavki narudžbe</li>
+                        )}
+                    </ul>
                 </div>
 
                 {/* UNOS PIN-A ZA PREUZIMANJE */}

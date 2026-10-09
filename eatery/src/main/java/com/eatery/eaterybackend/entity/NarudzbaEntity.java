@@ -48,8 +48,9 @@ public class NarudzbaEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "sifra", "lozinka"})
     private KorisnikEntity restoran;
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "id_narudzbe")
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<StavkaNarudzbeEntity> stavke = new ArrayList<>();
 
     @Column(name = "id_ponude", nullable = true)

@@ -6,7 +6,8 @@ import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.KlijentEntity;
 import com.eatery.eaterybackend.repository.KlijentRepository;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
-import com.eatery.eaterybackend.repository.RecenzijaRepository; // 1. IMPORT
+import com.eatery.eaterybackend.dto.RestoranOcjenaDTO;
+import com.eatery.eaterybackend.service.RecenzijaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -27,7 +28,7 @@ public class RestoranMapaController {
 
     private final KlijentRepository klijentRepository;
     private final KorisnikRepository korisnikRepository;
-    private final RecenzijaRepository recenzijaRepository; // 2. DODATO
+    private final RecenzijaService recenzijaService;
 
     private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
         if (authentication == null) return false;
@@ -135,16 +136,7 @@ public class RestoranMapaController {
                 double dist = izracunajUdaljenostKm(lat, lng, r.getLat(), r.getLng());
                 if (dist <= radijusKm) {
 
-                    // 3. DOBAVLJANJE OCJENA IZ RECENZIJA REPOSITORY-JA
-                    Double prosjecnaOcjena = recenzijaRepository.getProsjecnaOcjenaZaRestoran(r.getId());
-                    Long ukupanBrojOcjena = recenzijaRepository.countByRestoranId(r.getId());
-
-                    if (prosjecnaOcjena == null) {
-                        prosjecnaOcjena = 0.0;
-                    }
-                    if (ukupanBrojOcjena == null) {
-                        ukupanBrojOcjena = 0L;
-                    }
+                    RestoranOcjenaDTO ocjena = recenzijaService.ocjenaZaRestoran(r.getId());
 
                     rezultat.add(new RestoranMapaDTO(
                             r.getId(),
@@ -155,8 +147,8 @@ public class RestoranMapaController {
                             Math.round(dist * 10.0) / 10.0,
                             r.getRadnoVrijemeOd(),
                             r.getRadnoVrijemeDo(),
-                            prosjecnaOcjena,     // Proslijeđeno u DTO
-                            ukupanBrojOcjena      // Proslijeđeno u DTO
+                            ocjena.getProsjecnaOcjena(),
+                            ocjena.getUkupanBrojOcjena()
                     ));
                 }
             }

@@ -29,8 +29,9 @@ public class JeloEntity {
     @JoinColumn(name = "id_kategorije", nullable = false)
     private KategorijaEntity kategorija;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_korisnika", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "sifra"})
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private KorisnikEntity restoran;
 }

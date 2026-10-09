@@ -15,4 +15,6 @@ public class RestoranStatistikaDTO {
     private Long brojProdanihVrecica;
     private Long brojOtkazanihNarudzbi;
     private BigDecimal kgSpaseneHrane;
+    private double prosjecnaOcjena;
+    private long ukupanBrojOcjena;
 }

@@ -33,6 +33,7 @@ import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
+import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RestController
@@ -45,13 +46,15 @@ public class NarudzbaController {
     private final VrecicaIznenadjenjaRepository vrecicaIznenadjenjaRepository;
     private final KlijentRepository klijentRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final StavkaNazivResolver stavkaNazivResolver;
 
     public NarudzbaController(NarudzbaRepository narudzbaRepository,
                               KorisnikRepository korisnikRepository,
                               StavkaNarudzbeRepository stavkaNarudzbeRepository,
                               VrecicaIznenadjenjaRepository vrecicaIznenadjenjaRepository,
                               KlijentRepository klijentRepository,
-                              SimpMessagingTemplate messagingTemplate) {
+                              SimpMessagingTemplate messagingTemplate,
+                              StavkaNazivResolver stavkaNazivResolver) {
                                 
         this.narudzbaRepository = narudzbaRepository;
         this.korisnikRepository = korisnikRepository;
@@ -59,6 +62,7 @@ public class NarudzbaController {
         this.vrecicaIznenadjenjaRepository = vrecicaIznenadjenjaRepository;
         this.klijentRepository = klijentRepository;
         this.messagingTemplate = messagingTemplate;
+        this.stavkaNazivResolver = stavkaNazivResolver;
     }
 
     private boolean jeRestoranOtvoren(String od, String doVrijeme) {
@@ -156,6 +160,7 @@ public class NarudzbaController {
                 stavka.setTipStavke(sDTO.getTipStavke());
                 stavka.setKolicina(sDTO.getKolicina());
                 stavka.setCijena(sDTO.getCijena());
+                stavka.setNaziv(stavkaNazivResolver.nazivZaNovuStavku(sDTO.getTipStavke(), sDTO.getJeloId(), null));
                 stavkaNarudzbeRepository.save(stavka);
             }
         }
@@ -193,6 +198,7 @@ public class NarudzbaController {
     }
 
     @GetMapping("/kupac/{kupacId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getNarudzbeZaKupca(@PathVariable("kupacId") Long kupacId, Authentication authentication) {
 
         if (authentication == null) {
@@ -207,7 +213,11 @@ public class NarudzbaController {
                     .body("Nemate dozvolu da gledate narudžbe drugog kupca!");
         }
 
-        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacId(kupacId);
+        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByKupacIdWithStavke(kupacId);
+        List<StavkaNarudzbeEntity> sveStavke = narudzbe.stream()
+                .flatMap(n -> (n.getStavke() != null ? n.getStavke() : List.<StavkaNarudzbeEntity>of()).stream())
+                .toList();
+        var katalog = stavkaNazivResolver.katalogZa(sveStavke);
 
         List<NarudzbaDTO> dtos = narudzbe.stream().map(n -> {
             NarudzbaDTO dto = new NarudzbaDTO();
@@ -217,12 +227,27 @@ public class NarudzbaController {
             if (n.getRestoran() != null) {
                 dto.setRestoranId(n.getRestoran().getId());
                 dto.setRestoranNaziv(n.getRestoran().getKorisnickoIme());
+                klijentRepository.findById(n.getRestoran().getId())
+                        .map(KlijentEntity::getNazivObjekta)
+                        .filter(naziv -> naziv != null && !naziv.isBlank())
+                        .ifPresent(dto::setRestoranNaziv);
             }
 
             dto.setSifra(n.getSifra());
             dto.setAdresaDostave(n.getAdresaDostave());
             dto.setStatus(n.getStatus());
             dto.setUkupnaCijena(n.getUkupnaCijena());
+
+            List<StavkaNarudzbeEntity> stavkeEnt = n.getStavke() != null ? n.getStavke() : List.of();
+            dto.setStavke(stavkeEnt.stream().map(s -> {
+                NarudzbaDTO.StavkaDTO sd = new NarudzbaDTO.StavkaDTO();
+                sd.setJeloId(s.getIdJela());
+                sd.setTipStavke(s.getTipStavke());
+                sd.setKolicina(s.getKolicina());
+                sd.setCijena(s.getCijena());
+                sd.setNaziv(stavkaNazivResolver.naziv(s, katalog));
+                return sd;
+            }).toList());
             return dto;
         }).toList();
 

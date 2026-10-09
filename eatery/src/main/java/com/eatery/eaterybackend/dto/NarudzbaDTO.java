@@ -26,6 +26,7 @@ public class NarudzbaDTO {
     public static class StavkaDTO {
         private Long jeloId;
         private String tipStavke; // "JELO" ili "VRECICA"
+        private String naziv;
         private Integer kolicina;
         private BigDecimal cijena;
     }

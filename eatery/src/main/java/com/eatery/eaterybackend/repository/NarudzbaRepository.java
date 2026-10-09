@@ -3,6 +3,7 @@ package com.eatery.eaterybackend.repository;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,13 +14,23 @@ import com.eatery.eaterybackend.entity.NarudzbaEntity;
 @Repository
 public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> {
 
+    @EntityGraph(attributePaths = "stavke")
     List<NarudzbaEntity> findByKupacId(Long kupacId);
 
+    @EntityGraph(attributePaths = "stavke")
     List<NarudzbaEntity> findByRestoranId(Long restoranId);
 
     List<NarudzbaEntity> findByKupacIdOrderByIdDesc(Long kupacId);
 
     List<NarudzbaEntity> findByRestoranIdOrderByIdDesc(Long restoranId);
+
+    @EntityGraph(attributePaths = "stavke")
+    @Query("SELECT n FROM NarudzbaEntity n WHERE n.restoran.id = :restoranId ORDER BY n.id DESC")
+    List<NarudzbaEntity> findByRestoranIdWithStavke(@Param("restoranId") Long restoranId);
+
+    @EntityGraph(attributePaths = "stavke")
+    @Query("SELECT n FROM NarudzbaEntity n WHERE n.kupac.id = :kupacId ORDER BY n.id DESC")
+    List<NarudzbaEntity> findByKupacIdWithStavke(@Param("kupacId") Long kupacId);
 
     @Query(value = "SELECT COALESCE(SUM(sn.kolicina), 0) " +
             "FROM stavka_narudzbe sn " +

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.eatery.eaterybackend.dto.JeloDTO;
 import com.eatery.eaterybackend.dto.KategorijaDTO;
 import com.eatery.eaterybackend.dto.MojeNarudzbeDTO;
+import com.eatery.eaterybackend.dto.RestoranOcjenaDTO;
 import com.eatery.eaterybackend.dto.RestoranStatistikaDTO;
 import com.eatery.eaterybackend.entity.JeloEntity;
 import com.eatery.eaterybackend.entity.KategorijaEntity;
@@ -36,7 +37,8 @@ import com.eatery.eaterybackend.repository.KategorijaRepository;
 import com.eatery.eaterybackend.repository.KlijentRepository;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
-import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
+import com.eatery.eaterybackend.service.RecenzijaService;
+import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
 @RestController
 @RequestMapping("/api/restoran")
@@ -47,7 +49,8 @@ public class RestoranController {
     private final JeloRepository jeloRepository;
     private final KorisnikRepository korisnikRepository;
     private final NarudzbaRepository narudzbaRepository;
-    private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
+    private final RecenzijaService recenzijaService;
+    private final StavkaNazivResolver stavkaNazivResolver;
     private final KlijentRepository klijentRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -55,7 +58,8 @@ public class RestoranController {
                               JeloRepository jeloRepository,
                               KorisnikRepository korisnikRepository,
                               NarudzbaRepository narudzbaRepository,
-                              StavkaNarudzbeRepository stavkaNarudzbeRepository,
+                              RecenzijaService recenzijaService,
+                              StavkaNazivResolver stavkaNazivResolver,
                               KlijentRepository klijentRepository,
                               SimpMessagingTemplate messagingTemplate) {
                                 
@@ -63,18 +67,22 @@ public class RestoranController {
         this.jeloRepository = jeloRepository;
         this.korisnikRepository = korisnikRepository;
         this.narudzbaRepository = narudzbaRepository;
-        this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
+        this.recenzijaService = recenzijaService;
+        this.stavkaNazivResolver = stavkaNazivResolver;
         this.klijentRepository = klijentRepository;
         this.messagingTemplate = messagingTemplate;
     }
 
-    // Pomoćna metoda za provjeru autentičnosti i vlasništva restorana
     private boolean isRestoranOvlascen(Long trazeniRestoranId, Authentication authentication) {
         
-        if (authentication == null) return false;
+        if (authentication == null || trazeniRestoranId == null) return false;
+
+        Object details = authentication.getDetails();
+        if (details instanceof Number id) {
+            return trazeniRestoranId.equals(id.longValue());
+        }
 
         String ulogovaniUsername = authentication.getName();
-
         KorisnikEntity ulogovani = korisnikRepository.findByKorisnickoIme(ulogovaniUsername).orElse(null);
         
         return ulogovani != null && ulogovani.getId().equals(trazeniRestoranId);
@@ -149,15 +157,20 @@ public class RestoranController {
         Long otkazane = narudzbaRepository.prebrojOtkazaneNarudzbePoRestoranu(restoranId);
         BigDecimal kg = narudzbaRepository.kgSpaseneHranePoRestoranu(restoranId);
 
+        RestoranOcjenaDTO ocjena = recenzijaService.ocjenaZaRestoran(restoranId);
+
         RestoranStatistikaDTO dto = new RestoranStatistikaDTO();
         dto.setBrojProdanihVrecica(prodane != null ? prodane : 0L);
         dto.setBrojOtkazanihNarudzbi(otkazane != null ? otkazane : 0L);
         dto.setKgSpaseneHrane(kg != null ? kg : BigDecimal.ZERO);
+        dto.setProsjecnaOcjena(ocjena.getProsjecnaOcjena() != null ? ocjena.getProsjecnaOcjena() : 0.0);
+        dto.setUkupanBrojOcjena(ocjena.getUkupanBrojOcjena() != null ? ocjena.getUkupanBrojOcjena() : 0L);
 
         return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/{restoranId}/narudzbe")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getNarudzbeZaRestoran(@PathVariable Long restoranId, Authentication authentication) {
         
         if (!isRestoranOvlascen(restoranId, authentication)) {
@@ -165,7 +178,11 @@ public class RestoranController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nemate dozvolu za pregled narudžbi ovog restorana!");
         }
 
-        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByRestoranIdOrderByIdDesc(restoranId);
+        List<NarudzbaEntity> narudzbe = narudzbaRepository.findByRestoranIdWithStavke(restoranId);
+        List<StavkaNarudzbeEntity> sveStavke = narudzbe.stream()
+                .flatMap(n -> (n.getStavke() != null ? n.getStavke() : List.<StavkaNarudzbeEntity>of()).stream())
+                .toList();
+        var katalog = stavkaNazivResolver.katalogZa(sveStavke);
 
         List<MojeNarudzbeDTO> result = narudzbe.stream().map(n -> {
 
@@ -177,17 +194,14 @@ public class RestoranController {
             dto.setAdresaDostave(n.getAdresaDostave());
             dto.setVrijemeKreiranja(n.getVrijemeIDatum());
 
-            List<StavkaNarudzbeEntity> stavkeEnt = stavkaNarudzbeRepository.findByIdNarudzbe(n.getId());
-            List<MojeNarudzbeDTO.StavkaPregledDTO> stavkeDTO = stavkeEnt.stream().map(s -> {
+            List<StavkaNarudzbeEntity> stavkeEnt = n.getStavke() != null ? n.getStavke() : List.of();
+            dto.setStavke(stavkeEnt.stream().map(s -> {
                 MojeNarudzbeDTO.StavkaPregledDTO sd = new MojeNarudzbeDTO.StavkaPregledDTO();
                 sd.setKolicina(s.getKolicina());
                 sd.setCijena(s.getCijena());
-                jeloRepository.findById(s.getIdJela()).ifPresent(j -> sd.setNazivJela(j.getNaziv()));
-                
+                sd.setNazivJela(stavkaNazivResolver.naziv(s, katalog));
                 return sd;
-            }).toList();
-
-            dto.setStavke(stavkeDTO);
+            }).toList());
 
             return dto;
         }).toList();
