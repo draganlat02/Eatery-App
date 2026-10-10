@@ -16,6 +16,7 @@ import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
 import com.eatery.eaterybackend.repository.ZahtjevZaAktivacijuRepository;
 import com.eatery.eaterybackend.util.SuspenzijaUtil;
 import org.hibernate.proxy.HibernateProxy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +37,23 @@ public class AdminService {
     private final KupacRepository kupacRepository;
     private final KlijentRepository klijentRepository;
     private final VrecicaIznenadjenjaRepository vrecicaRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final EmailService emailService;
 
     public AdminService(ZahtjevZaAktivacijuRepository zahtjevRepository,
                         KorisnikRepository korisnikRepository,
                         KupacRepository kupacRepository,
                         KlijentRepository klijentRepository,
-                        VrecicaIznenadjenjaRepository vrecicaRepository) {
+                        VrecicaIznenadjenjaRepository vrecicaRepository,
+                        ApplicationEventPublisher eventPublisher,
+                        EmailService emailService) {
         this.zahtjevRepository = zahtjevRepository;
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
         this.klijentRepository = klijentRepository;
         this.vrecicaRepository = vrecicaRepository;
+        this.eventPublisher = eventPublisher;
+        this.emailService = emailService;
     }
 
     public void requireAdmin(Authentication authentication) {
@@ -108,7 +115,7 @@ public class AdminService {
         if (odobreno) {
             korisnik.setAktiviran(true);
             korisnikRepository.save(korisnik);
-            return "Nalog je uspješno aktiviran!";
+            return obavijestiOAktivaciji(korisnik);
         }
 
         obrisiKorisnika(korisnik);
@@ -124,9 +131,21 @@ public class AdminService {
             throw new IllegalStateException("Aktivacija je potrebna samo za restorane!");
         }
 
+        boolean vecAktiviran = Boolean.TRUE.equals(korisnik.getAktiviran());
         korisnik.setAktiviran(true);
         korisnikRepository.save(korisnik);
         zahtjevRepository.findByKorisnikId(id).ifPresent(zahtjevRepository::delete);
+        return vecAktiviran ? "Nalog je već aktiviran." : obavijestiOAktivaciji(korisnik);
+    }
+
+    private String obavijestiOAktivaciji(KorisnikEntity korisnik) {
+        String naziv = korisnik instanceof KlijentEntity klijent ? klijent.getNazivObjekta() : null;
+        eventPublisher.publishEvent(new EmailService.NalogAktiviran(
+                korisnik.getEmail(), korisnik.getKorisnickoIme(), naziv));
+
+        if (emailService.jeKonfigurisan() && korisnik.getEmail() != null && !korisnik.getEmail().isBlank()) {
+            return "Nalog je uspješno aktiviran! Obavještenje se šalje na " + korisnik.getEmail() + ".";
+        }
         return "Nalog je uspješno aktiviran!";
     }
 
