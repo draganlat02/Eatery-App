@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import API from '../api';
+import PromjenaSifre from '../components/PromjenaSifre';
 import L from 'leaflet';
 import axios from 'axios';
 import './KlijentProfil.css';
@@ -364,6 +365,10 @@ const KlijentProfil = () => {
                         )}
                     </MapContainer>
                 </div>
+            </div>
+
+            <div className="klijent-profil-sifra">
+                <PromjenaSifre />
             </div>
         </div>
     );

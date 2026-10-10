@@ -25,6 +25,10 @@ function AdminPanel({ user, onLogout }) {
     const [suspenzijaId, setSuspenzijaId] = useState(null);
     const [suspenzijaForma, setSuspenzijaForma] = useState(null);
 
+    const [zahtjeviSifra, setZahtjeviSifra] = useState([]);
+    const [zahtjeviSifraLoading, setZahtjeviSifraLoading] = useState(true);
+    const [obradaSifraId, setObradaSifraId] = useState(null);
+
     const ucitajZahtjeve = useCallback(async () => {
         try {
             setZahtjeviLoading(true);
@@ -76,9 +80,26 @@ function AdminPanel({ user, onLogout }) {
         }
     }, [sekcija, pretraga, aktiviranFilter, suspendovanFilter, sort, dir]);
 
+    const ucitajZahtjeveSifra = useCallback(async () => {
+        try {
+            setZahtjeviSifraLoading(true);
+            const res = await API.get('/admin/zahtjevi-sifra');
+            setZahtjeviSifra(res.data);
+        } catch (err) {
+            const porukaGreske = err.response?.data?.message || err.message || 'Nepoznata greška';
+            setPoruka(`Greška: ${porukaGreske}`);
+        } finally {
+            setZahtjeviSifraLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         ucitajZahtjeve();
     }, [ucitajZahtjeve]);
+
+    useEffect(() => {
+        ucitajZahtjeveSifra();
+    }, [ucitajZahtjeveSifra, sekcija]);
 
     useEffect(() => {
         if (sekcija === 'oglasi') {
@@ -105,6 +126,20 @@ function AdminPanel({ user, onLogout }) {
             setPoruka(`Greška: ${porukaGreske}`);
         } finally {
             setObradaId(null);
+        }
+    };
+
+    const obradiZahtjevSifra = async (id, odobreno) => {
+        try {
+            setObradaSifraId(id);
+            const res = await API.post(`/admin/zahtjevi-sifra/${id}/obradi?odobreno=${odobreno}`);
+            setPoruka(typeof res.data === 'string' ? res.data : 'Zahtjev je obrađen.');
+            setZahtjeviSifra((prev) => prev.filter((z) => z.id !== id));
+        } catch (err) {
+            const porukaGreske = err.response?.data?.message || 'Došlo je do greške prilikom obrade zahtjeva.';
+            setPoruka(`Greška: ${porukaGreske}`);
+        } finally {
+            setObradaSifraId(null);
         }
     };
 
@@ -362,6 +397,10 @@ function AdminPanel({ user, onLogout }) {
             title: 'Restorani',
             text: 'Pregled klijenata iz baze. Sortirajte listu, aktivirajte restorane ili suspendujte nalog.'
         },
+        sifre: {
+            title: 'Zahtjevi za promjenu šifre',
+            text: 'Korisnici su zatražili novu šifru. Nova šifra počinje važiti tek kada je odobrite.'
+        },
         oglasi: {
             title: 'Oglasi',
             text: 'Pregledajte vrećice iznenađenja i uklonite oglase koji krše pravila platforme.'
@@ -568,6 +607,13 @@ function AdminPanel({ user, onLogout }) {
                         </button>
                         <button
                             type="button"
+                            className={sekcija === 'sifre' ? 'is-active' : ''}
+                            onClick={() => setSekcija('sifre')}
+                        >
+                            Šifre{zahtjeviSifra.length > 0 ? ` (${zahtjeviSifra.length})` : ''}
+                        </button>
+                        <button
+                            type="button"
                             className={sekcija === 'oglasi' ? 'is-active' : ''}
                             onClick={() => setSekcija('oglasi')}
                         >
@@ -672,6 +718,69 @@ function AdminPanel({ user, onLogout }) {
                                                         onClick={() => obradiZahtjev(z.id, false)}
                                                     >
                                                         {obradaId === z.id ? 'Obrada...' : 'Odbij'}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {sekcija === 'sifre' && (
+                    <div className="admin-card">
+                        {zahtjeviSifraLoading ? (
+                            <div className="admin-inline-loading">Učitavanje zahtjeva...</div>
+                        ) : zahtjeviSifra.length === 0 ? (
+                            <div className="admin-empty">
+                                <h3>Nema zahtjeva za promjenu šifre</h3>
+                                <p>Kada korisnik zatraži novu šifru, zahtjev će se pojaviti ovdje.</p>
+                            </div>
+                        ) : (
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Uloga</th>
+                                        <th>Ime / objekat</th>
+                                        <th>Korisničko ime</th>
+                                        <th>Email</th>
+                                        <th>Datum</th>
+                                        <th>Akcije</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {zahtjeviSifra.map((z) => (
+                                        <tr key={z.id}>
+                                            <td>{z.id}</td>
+                                            <td>{nazivUloge(z.uloga)}</td>
+                                            <td>{z.prikazIme || '—'}</td>
+                                            <td>{z.korisnickoIme || 'N/A'}</td>
+                                            <td>{z.email || 'N/A'}</td>
+                                            <td>
+                                                {z.datumPodnosenja
+                                                    ? new Date(z.datumPodnosenja).toLocaleString()
+                                                    : 'N/A'}
+                                            </td>
+                                            <td>
+                                                <div className="admin-actions">
+                                                    <button
+                                                        className="admin-approve"
+                                                        type="button"
+                                                        disabled={obradaSifraId === z.id}
+                                                        onClick={() => obradiZahtjevSifra(z.id, true)}
+                                                    >
+                                                        {obradaSifraId === z.id ? 'Obrada...' : 'Odobri'}
+                                                    </button>
+                                                    <button
+                                                        className="admin-reject"
+                                                        type="button"
+                                                        disabled={obradaSifraId === z.id}
+                                                        onClick={() => obradiZahtjevSifra(z.id, false)}
+                                                    >
+                                                        {obradaSifraId === z.id ? 'Obrada...' : 'Odbij'}
                                                     </button>
                                                 </div>
                                             </td>

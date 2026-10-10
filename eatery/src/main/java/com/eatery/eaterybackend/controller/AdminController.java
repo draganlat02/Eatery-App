@@ -36,6 +36,20 @@ public class AdminController {
         return ResponseEntity.ok(adminService.obradiZahtjev(id, odobreno));
     }
 
+    @GetMapping("/zahtjevi-sifra")
+    public ResponseEntity<List<AdminZahtjevDTO>> getZahtjeveZaPromjenuSifre(Authentication authentication) {
+        adminService.requireAdmin(authentication);
+        return ResponseEntity.ok(adminService.getZahtjeveZaPromjenuSifre());
+    }
+
+    @PostMapping("/zahtjevi-sifra/{id}/obradi")
+    public ResponseEntity<String> obradiZahtjevZaPromjenuSifre(@PathVariable Long id,
+                                                               @RequestParam boolean odobreno,
+                                                               Authentication authentication) {
+        adminService.requireAdmin(authentication);
+        return ResponseEntity.ok(adminService.obradiZahtjevZaPromjenuSifre(id, odobreno));
+    }
+
     @GetMapping("/kupci")
     public ResponseEntity<List<AdminKorisnikDTO>> getKupce(
             @RequestParam(required = false) String q,
