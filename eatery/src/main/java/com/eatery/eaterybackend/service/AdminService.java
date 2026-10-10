@@ -9,11 +9,13 @@ import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.KupacEntity;
 import com.eatery.eaterybackend.entity.VrecicaIznenadjenjaEntity;
 import com.eatery.eaterybackend.entity.ZahtjevZaAktivacijuEntity;
+import com.eatery.eaterybackend.entity.ZahtjevZaPromjenuSifreEntity;
 import com.eatery.eaterybackend.repository.KlijentRepository;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.KupacRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
 import com.eatery.eaterybackend.repository.ZahtjevZaAktivacijuRepository;
+import com.eatery.eaterybackend.repository.ZahtjevZaPromjenuSifreRepository;
 import com.eatery.eaterybackend.util.SuspenzijaUtil;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,6 +41,7 @@ public class AdminService {
     private final VrecicaIznenadjenjaRepository vrecicaRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final EmailService emailService;
+    private final ZahtjevZaPromjenuSifreRepository zahtjevSifraRepository;
 
     public AdminService(ZahtjevZaAktivacijuRepository zahtjevRepository,
                         KorisnikRepository korisnikRepository,
@@ -46,7 +49,8 @@ public class AdminService {
                         KlijentRepository klijentRepository,
                         VrecicaIznenadjenjaRepository vrecicaRepository,
                         ApplicationEventPublisher eventPublisher,
-                        EmailService emailService) {
+                        EmailService emailService,
+                        ZahtjevZaPromjenuSifreRepository zahtjevSifraRepository) {
         this.zahtjevRepository = zahtjevRepository;
         this.korisnikRepository = korisnikRepository;
         this.kupacRepository = kupacRepository;
@@ -54,6 +58,7 @@ public class AdminService {
         this.vrecicaRepository = vrecicaRepository;
         this.eventPublisher = eventPublisher;
         this.emailService = emailService;
+        this.zahtjevSifraRepository = zahtjevSifraRepository;
     }
 
     public void requireAdmin(Authentication authentication) {
@@ -147,6 +152,40 @@ public class AdminService {
             return "Nalog je uspješno aktiviran! Obavještenje se šalje na " + korisnik.getEmail() + ".";
         }
         return "Nalog je uspješno aktiviran!";
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminZahtjevDTO> getZahtjeveZaPromjenuSifre() {
+        return zahtjevSifraRepository.findAll().stream()
+                .sorted(Comparator.comparing(ZahtjevZaPromjenuSifreEntity::getDatumPodnosenja,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toZahtjevSifraDto)
+                .toList();
+    }
+
+    @Transactional
+    public String obradiZahtjevZaPromjenuSifre(Long idZahtjeva, boolean odobreno) {
+        ZahtjevZaPromjenuSifreEntity zahtjev = zahtjevSifraRepository.findById(idZahtjeva)
+                .orElseThrow(() -> new IllegalArgumentException("Zahtjev nije pronađen!"));
+
+        KorisnikEntity korisnik = unwrap(zahtjev.getKorisnik());
+        zahtjevSifraRepository.delete(zahtjev);
+
+        if (odobreno) {
+            korisnik.setSifra(zahtjev.getNovaSifra());
+            korisnikRepository.save(korisnik);
+        }
+
+        eventPublisher.publishEvent(new EmailService.SifraObradjena(
+                korisnik.getEmail(), korisnik.getKorisnickoIme(), odobreno));
+
+        String poruka = odobreno
+                ? "Šifra za korisnika " + korisnik.getKorisnickoIme() + " je promijenjena."
+                : "Zahtjev za promjenu šifre korisnika " + korisnik.getKorisnickoIme() + " je odbijen.";
+        if (emailService.jeKonfigurisan() && korisnik.getEmail() != null && !korisnik.getEmail().isBlank()) {
+            poruka += " Obavještenje se šalje na " + korisnik.getEmail() + ".";
+        }
+        return poruka;
     }
 
     @Transactional
@@ -294,10 +333,18 @@ public class AdminService {
     }
 
     private AdminZahtjevDTO toZahtjevDto(ZahtjevZaAktivacijuEntity zahtjev) {
-        AdminKorisnikDTO korisnik = zahtjev.getKorisnik() == null ? null : toKorisnikDto(zahtjev.getKorisnik());
+        return toZahtjevDto(zahtjev.getId(), zahtjev.getKorisnik(), zahtjev.getDatumPodnosenja());
+    }
+
+    private AdminZahtjevDTO toZahtjevSifraDto(ZahtjevZaPromjenuSifreEntity zahtjev) {
+        return toZahtjevDto(zahtjev.getId(), zahtjev.getKorisnik(), zahtjev.getDatumPodnosenja());
+    }
+
+    private AdminZahtjevDTO toZahtjevDto(Long id, KorisnikEntity k, LocalDateTime datumPodnosenja) {
+        AdminKorisnikDTO korisnik = k == null ? null : toKorisnikDto(k);
         AdminZahtjevDTO dto = new AdminZahtjevDTO();
-        dto.setId(zahtjev.getId());
-        dto.setDatumPodnosenja(zahtjev.getDatumPodnosenja());
+        dto.setId(id);
+        dto.setDatumPodnosenja(datumPodnosenja);
         if (korisnik != null) {
             dto.setKorisnikId(korisnik.getId());
             dto.setKorisnickoIme(korisnik.getKorisnickoIme());

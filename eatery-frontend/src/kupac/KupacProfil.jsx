@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
+import PromjenaSifre from '../components/PromjenaSifre';
 import './KupacProfil.css';
 
 function KupacProfil({ kupacId, user, onUserUpdate }) {
@@ -266,6 +267,10 @@ function KupacProfil({ kupacId, user, onUserUpdate }) {
                     ) : (
                         poruka && <p className="profile-edit-message success">{poruka}</p>
                     )}
+                </div>
+
+                <div className="profile-password-card">
+                    <PromjenaSifre />
                 </div>
             </div>
         </section>

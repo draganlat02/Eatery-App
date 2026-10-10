@@ -1,6 +1,3 @@
-/* =========================================================
-   KUPAC PROFIL
-   ========================================================= */
 
 .profile-section {
     --primary: #0f766e;
@@ -406,4 +403,8 @@
     .profile-edit-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.profile-password-card {
+    grid-column: 1 / -1;
 }

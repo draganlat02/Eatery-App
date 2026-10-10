@@ -24,6 +24,8 @@ public class EmailService {
 
     public record NalogAktiviran(String email, String korisnickoIme, String nazivObjekta) {}
 
+    public record SifraObradjena(String email, String korisnickoIme, boolean odobreno) {}
+
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String smtpKorisnik;
     private final String posiljalac;
@@ -64,7 +66,7 @@ public class EmailService {
         if (mailSender.getIfAvailable() instanceof JavaMailSenderImpl impl) {
             try {
                 impl.testConnection();
-                log.info("Email je podesen: obavjestenja o aktivaciji se salju sa {}.", posiljalac);
+                log.info("Email je podesen: obavjestenja se salju sa {}.", posiljalac);
             } catch (Exception e) {
                 String razlog = e.getMessage() != null && !e.getMessage().isBlank()
                         ? e.getMessage() : e.getClass().getSimpleName();
@@ -74,17 +76,53 @@ public class EmailService {
         }
     }
 
-    // Šalje se tek nakon što je aktivacija sačuvana u bazi, u pozadini, da admin ne čeka SMTP server
+    // Šalje se tek nakon što je izmjena sačuvana u bazi, u pozadini, da admin ne čeka SMTP server
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    public void posaljiEmailOAktivaciji(NalogAktiviran dogadjaj) {
-        if (dogadjaj.email() == null || dogadjaj.email().isBlank()) {
-            log.warn("Email o aktivaciji nije poslan: korisnik {} nema email adresu.", dogadjaj.korisnickoIme());
+    public void posaljiEmailOAktivaciji(NalogAktiviran d) {
+        String naziv = HtmlUtils.htmlEscape(nazivZaPoruku(d));
+        posalji(d.email(), d.korisnickoIme(), "Vaš Eatery nalog je aktiviran",
+                "Poštovani,\n\n"
+                        + "administrator je odobrio vaš nalog za restoran \"" + nazivZaPoruku(d) + "\" na Eatery platformi.\n"
+                        + "Sada se možete prijaviti i početi objavljivati jela i vrećice iznenađenja.\n\n"
+                        + potpis(d.korisnickoIme()),
+                okvir("Vaš nalog je aktiviran 🎉",
+                        "<p>administrator je odobrio vaš nalog za restoran <strong>" + naziv + "</strong> na Eatery platformi. "
+                                + "Sada se možete prijaviti i početi objavljivati jela i vrećice iznenađenja.</p>",
+                        d.korisnickoIme()));
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void posaljiEmailOPromjeniSifre(SifraObradjena d) {
+        if (d.odobreno()) {
+            posalji(d.email(), d.korisnickoIme(), "Vaša Eatery šifra je promijenjena",
+                    "Poštovani,\n\n"
+                            + "administrator je odobrio vaš zahtjev za promjenu šifre. Od sada se prijavljujete novom šifrom.\n"
+                            + "Ako niste vi tražili ovu promjenu, odmah se javite administratoru.\n\n"
+                            + potpis(d.korisnickoIme()),
+                    okvir("Šifra je promijenjena",
+                            "<p>administrator je odobrio vaš zahtjev za promjenu šifre. Od sada se prijavljujete <strong>novom šifrom</strong>.</p>"
+                                    + "<p>Ako niste vi tražili ovu promjenu, odmah se javite administratoru.</p>",
+                            d.korisnickoIme()));
+        } else {
+            posalji(d.email(), d.korisnickoIme(), "Zahtjev za promjenu šifre je odbijen",
+                    "Poštovani,\n\n"
+                            + "administrator je odbio vaš zahtjev za promjenu šifre. Vaša dosadašnja šifra i dalje važi.\n\n"
+                            + potpis(d.korisnickoIme()),
+                    okvir("Zahtjev za promjenu šifre je odbijen",
+                            "<p>administrator je odbio vaš zahtjev za promjenu šifre. Vaša <strong>dosadašnja šifra i dalje važi</strong>.</p>",
+                            d.korisnickoIme()));
+        }
+    }
+
+    private void posalji(String email, String korisnickoIme, String naslov, String tekst, String html) {
+        if (email == null || email.isBlank()) {
+            log.warn("Email \"{}\" nije poslan: korisnik {} nema email adresu.", naslov, korisnickoIme);
             return;
         }
         if (!jeKonfigurisan()) {
-            log.warn("Email o aktivaciji za {} nije poslan jer email nije podesen (application.properties).",
-                    dogadjaj.email());
+            log.warn("Email \"{}\" za {} nije poslan jer email nije podesen (application.properties).", naslov, email);
             return;
         }
 
@@ -93,13 +131,13 @@ public class EmailService {
             MimeMessage poruka = sender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(poruka, true, "UTF-8");
             helper.setFrom(posiljalac, "Eatery");
-            helper.setTo(dogadjaj.email());
-            helper.setSubject("Vaš Eatery nalog je aktiviran");
-            helper.setText(tekst(dogadjaj), html(dogadjaj));
+            helper.setTo(email);
+            helper.setSubject(naslov);
+            helper.setText(tekst, html);
             sender.send(poruka);
-            log.info("Email o aktivaciji naloga poslan na {}.", dogadjaj.email());
+            log.info("Email \"{}\" poslan na {}.", naslov, email);
         } catch (Exception e) {
-            log.error("Slanje emaila o aktivaciji na {} nije uspjelo: {}", dogadjaj.email(), e.getMessage());
+            log.error("Slanje emaila \"{}\" na {} nije uspjelo: {}", naslov, email, e.getMessage());
         }
     }
 
@@ -107,28 +145,21 @@ public class EmailService {
         return d.nazivObjekta() != null && !d.nazivObjekta().isBlank() ? d.nazivObjekta() : d.korisnickoIme();
     }
 
-    private String tekst(NalogAktiviran d) {
-        return "Poštovani,\n\n"
-                + "administrator je odobrio vaš nalog za restoran \"" + nazivZaPoruku(d) + "\" na Eatery platformi.\n"
-                + "Sada se možete prijaviti i početi objavljivati jela i vrećice iznenađenja.\n\n"
-                + "Korisničko ime: " + d.korisnickoIme() + "\n"
+    private String potpis(String korisnickoIme) {
+        return "Korisničko ime: " + korisnickoIme + "\n"
                 + "Prijava: " + frontendUrl + "\n\n"
                 + "Vaš Eatery tim";
     }
 
-    private String html(NalogAktiviran d) {
-        String naziv = HtmlUtils.htmlEscape(nazivZaPoruku(d));
-        String korisnik = HtmlUtils.htmlEscape(d.korisnickoIme());
-        String link = HtmlUtils.htmlEscape(frontendUrl);
+    private String okvir(String naslov, String sadrzaj, String korisnickoIme) {
         return """
                 <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#17201f">
                   <div style="background:#0f766e;color:#fff;padding:20px 24px;border-radius:12px 12px 0 0">
-                    <h2 style="margin:0;font-size:20px">Vaš nalog je aktiviran 🎉</h2>
+                    <h2 style="margin:0;font-size:20px">%s</h2>
                   </div>
                   <div style="border:1px solid #e5e9e8;border-top:none;padding:24px;border-radius:0 0 12px 12px">
                     <p>Poštovani,</p>
-                    <p>administrator je odobrio vaš nalog za restoran <strong>%s</strong> na Eatery platformi.
-                       Sada se možete prijaviti i početi objavljivati jela i vrećice iznenađenja.</p>
+                    %s
                     <p style="margin:20px 0">
                       <a href="%s" style="background:#0f766e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Prijavi se</a>
                     </p>
@@ -136,6 +167,7 @@ public class EmailService {
                     <p style="color:#687573;font-size:13px">Vaš Eatery tim</p>
                   </div>
                 </div>
-                """.formatted(naziv, link, korisnik);
+                """.formatted(HtmlUtils.htmlEscape(naslov), sadrzaj,
+                HtmlUtils.htmlEscape(frontendUrl), HtmlUtils.htmlEscape(korisnickoIme));
     }
 }
