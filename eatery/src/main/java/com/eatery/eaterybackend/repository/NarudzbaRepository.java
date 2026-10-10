@@ -32,6 +32,12 @@ public interface NarudzbaRepository extends JpaRepository<NarudzbaEntity, Long> 
     @Query("SELECT n FROM NarudzbaEntity n WHERE n.kupac.id = :kupacId ORDER BY n.id DESC")
     List<NarudzbaEntity> findByKupacIdWithStavke(@Param("kupacId") Long kupacId);
 
+    @Query("SELECT n FROM NarudzbaEntity n " +
+            "WHERE (n.obavijestPreuzimanjaPoslana IS NULL OR n.obavijestPreuzimanjaPoslana = false) " +
+            "AND n.preuzimanjeOd IS NOT NULL AND n.preuzimanjeDo IS NOT NULL " +
+            "AND n.preuzimanjeOd <= :sada AND n.preuzimanjeDo > :sada")
+    List<NarudzbaEntity> findZaObavijestPreuzimanja(@Param("sada") java.time.LocalDateTime sada);
+
     @Query(value = "SELECT COALESCE(SUM(sn.kolicina), 0) " +
             "FROM stavka_narudzbe sn " +
             "WHERE sn.id_narudzbe IN (" +

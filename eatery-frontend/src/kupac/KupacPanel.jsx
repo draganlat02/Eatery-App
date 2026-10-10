@@ -6,7 +6,7 @@ import HeroVrecice from './HeroVrecice';
 import './KupacPanel.css';
 import '../styles/eatery-styles.css';
 import KupacMapa from './KupacMapa';
-import { formatRadnoVrijeme, statusRadnogVremena } from './radnoVrijeme';
+import { formatRadnoVrijeme, statusRadnogVremena, statusTerminaNarudzbe, formatTerminNarudzbe } from './radnoVrijeme';
 import { pretplatiSeNaTopic, odsviraliObavjestenje } from '../ws';
 import StarRating from '../components/StarRating';
 
@@ -83,6 +83,19 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
                     });
                     setOsveziNarudzbe(prev => prev + 1);
                 }
+
+                // Počeo je termin preuzimanja vrećice iznenađenja koji je definisao restoran
+                if (poruka?.tip === 'VRECICA_SPREMNA') {
+                    odsviraliObavjestenje();
+                    setNotifikacija({
+                        ikona: '🎁',
+                        naslov: 'Možete doći po vrećicu iznenađenja!',
+                        tekst: `${poruka.restoranNaziv || 'Restoran'} vas očekuje od ${poruka.preuzimanjeOd} do ${poruka.preuzimanjeDo}.`
+                            + (poruka.pin ? ` PIN za preuzimanje: ${poruka.pin}` : ''),
+                        trajna: true
+                    });
+                    setOsveziNarudzbe(prev => prev + 1);
+                }
             }
         );
 
@@ -90,7 +103,7 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
     }, [user]);
 
     useEffect(() => {
-        if (!notifikacija) return;
+        if (!notifikacija || notifikacija.trajna) return; // obavještenje o preuzimanju ostaje dok ga kupac ne zatvori
         const timer = setTimeout(() => setNotifikacija(null), 6000);
         return () => clearTimeout(timer);
     }, [notifikacija]);
@@ -220,7 +233,16 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
             const noviPin = odgovor.data?.pin;
             if (noviPin) setPoslednjiPin(noviPin);
 
-            alert(noviPin ? `🎉 Narudžba poslata! PIN za preuzimanje: ${noviPin}` : '🎉 Narudžba uspešno poslata!');
+            let tekstPotvrde = noviPin ? `🎉 Narudžba poslata! PIN za preuzimanje: ${noviPin}` : '🎉 Narudžba uspešno poslata!';
+            const { preuzimanjeOd, preuzimanjeDo } = odgovor.data || {};
+            const statusTermina = statusTerminaNarudzbe(preuzimanjeOd, preuzimanjeDo);
+            if (statusTermina) {
+                const termin = formatTerminNarudzbe(preuzimanjeOd, preuzimanjeDo);
+                tekstPotvrde += statusTermina === 'sada'
+                    ? `\n\n🕒 Preuzimanje je u toku (${termin}) — možete doći odmah.`
+                    : `\n\n🕒 Vrećicu preuzimate ${termin}. Dobićete obavještenje kad možete doći.`;
+            }
+            alert(tekstPotvrde);
             setKorpa([]);
             setAdresa('');
             setNarudzbaGreska('');
@@ -294,7 +316,7 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
         <div className="kupac-page">
             {notifikacija && (
                 <div className="eatery-notifikacija" role="alert">
-                    <span className="eatery-notifikacija-icon">📦</span>
+                    <span className="eatery-notifikacija-icon">{notifikacija.ikona || '📦'}</span>
                     <div className="eatery-notifikacija-tekst">
                         <strong>{notifikacija.naslov}</strong>
                         <span>{notifikacija.tekst}</span>

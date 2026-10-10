@@ -5,6 +5,7 @@ import "../styles/eatery-styles.css";
 import KlijentProfil from './KlijentProfil';
 import API from '../api';
 import { pretplatiSeNaTopic, odsviraliObavjestenje } from '../ws';
+import { formatTerminNarudzbe } from '../kupac/radnoVrijeme';
 
 const RestoranPanel = ({ restoranId, user, onLogout }) => {
 
@@ -472,6 +473,17 @@ setJela(resJela.data);
             return;
         }
 
+        // Satnica preuzimanja vrećice (npr. 18:00 – 19:30) je obavezna
+        if (!forma.vrijemePreuzimanjaOd || !forma.vrijemePreuzimanjaDo) {
+            alert("Unesite vrijeme preuzimanja (od – do).");
+            return;
+        }
+
+        if (forma.vrijemePreuzimanjaOd === forma.vrijemePreuzimanjaDo) {
+            alert("Vrijeme početka i kraja preuzimanja ne može biti isto.");
+            return;
+        }
+
         const payload = {
 
             naziv: forma.naziv,
@@ -533,6 +545,7 @@ setJela(resJela.data);
             );
 
             alert(
+                err.response?.data?.message ||
                 "Greška prilikom kreiranja vrećice."
             );
         }
@@ -1362,6 +1375,13 @@ const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
                             {Number(n.ukupnaCijena || 0).toFixed(2)} KM
                         </strong>
                     </div>
+
+                    {n.preuzimanjeOd && n.preuzimanjeDo && (
+                        <div className="order-info order-info-pickup">
+                            <span>🕒 Termin preuzimanja</span>
+                            <strong>{formatTerminNarudzbe(n.preuzimanjeOd, n.preuzimanjeDo)}</strong>
+                        </div>
+                    )}
                 </div>
 
                 <div className="order-items">
@@ -2403,6 +2423,15 @@ const PromijeniStatusNarudzbe = async (narudzbaId, noviStatus) => {
                                                     <strong>Alergeni:</strong>
                                                     {" "}
                                                     {v.alergijskaUpozorenja}
+                                                </div>
+                                            )}
+
+                                            {v.vrijemePreuzimanjaOd && v.vrijemePreuzimanjaDo && (
+                                                <div className="bag-pickup">
+                                                    🕒 Preuzimanje:{" "}
+                                                    <strong>
+                                                        {v.vrijemePreuzimanjaOd} – {v.vrijemePreuzimanjaDo}
+                                                    </strong>
                                                 </div>
                                             )}
 

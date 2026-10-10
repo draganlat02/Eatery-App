@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -18,6 +19,8 @@ public class NarudzbaDTO {
     private String status;
     private String adresaDostave;
     private BigDecimal ukupnaCijena;
+    private LocalDateTime preuzimanjeOd; // termin preuzimanja vrećice (null ako nema vrećice)
+    private LocalDateTime preuzimanjeDo;
     private List<StavkaDTO> stavke;
 
     @Data

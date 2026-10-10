@@ -1,5 +1,6 @@
 package com.eatery.eaterybackend.controller;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -32,6 +33,7 @@ import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
 import com.eatery.eaterybackend.repository.StavkaNarudzbeRepository;
 import com.eatery.eaterybackend.repository.VrecicaIznenadjenjaRepository;
+import com.eatery.eaterybackend.service.PreuzimanjeVreciceService;
 import com.eatery.eaterybackend.service.RadnoVrijemeService;
 import com.eatery.eaterybackend.service.StavkaNazivResolver;
 
@@ -48,6 +50,7 @@ public class NarudzbaController {
     private final SimpMessagingTemplate messagingTemplate;
     private final StavkaNazivResolver stavkaNazivResolver;
     private final RadnoVrijemeService radnoVrijemeService;
+    private final PreuzimanjeVreciceService preuzimanjeVreciceService;
 
     public NarudzbaController(NarudzbaRepository narudzbaRepository,
                               KorisnikRepository korisnikRepository,
@@ -56,7 +59,8 @@ public class NarudzbaController {
                               KlijentRepository klijentRepository,
                               SimpMessagingTemplate messagingTemplate,
                               StavkaNazivResolver stavkaNazivResolver,
-                              RadnoVrijemeService radnoVrijemeService) {
+                              RadnoVrijemeService radnoVrijemeService,
+                              PreuzimanjeVreciceService preuzimanjeVreciceService) {
                                 
         this.narudzbaRepository = narudzbaRepository;
         this.korisnikRepository = korisnikRepository;
@@ -66,6 +70,7 @@ public class NarudzbaController {
         this.messagingTemplate = messagingTemplate;
         this.stavkaNazivResolver = stavkaNazivResolver;
         this.radnoVrijemeService = radnoVrijemeService;
+        this.preuzimanjeVreciceService = preuzimanjeVreciceService;
     }
 
     @PostMapping
@@ -91,6 +96,25 @@ public class NarudzbaController {
                     .body(Map.of("message", radnoVrijemeService.porukaZatvoren(klijentRestorana)));
         }
 
+        // Termin preuzimanja vrećica iznenađenja (satnicu definiše restoran na vrećici)
+        List<VrecicaIznenadjenjaEntity> vreciceUNarudzbi = new ArrayList<>();
+        if (dto.getStavke() != null) {
+            for (NarudzbaDTO.StavkaDTO sDTO : dto.getStavke()) {
+                if ("VRECICA".equalsIgnoreCase(sDTO.getTipStavke()) && sDTO.getJeloId() != null) {
+                    vrecicaIznenadjenjaRepository.findById(sDTO.getJeloId()).ifPresent(vreciceUNarudzbi::add);
+                }
+            }
+        }
+
+        LocalDateTime sada = preuzimanjeVreciceService.sada();
+        PreuzimanjeVreciceService.RezultatTermina rezultatTermina =
+                preuzimanjeVreciceService.izracunajTermin(vreciceUNarudzbi, sada);
+
+        if (rezultatTermina.greska() != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", rezultatTermina.greska()));
+        }
+
         NarudzbaEntity narudzba = new NarudzbaEntity();
         narudzba.setKupac(ulogovaniKupac);
         narudzba.setRestoran(restoran);
@@ -98,6 +122,14 @@ public class NarudzbaController {
         narudzba.setUkupnaCijena(dto.getUkupnaCijena());
         narudzba.setStatus("KREIRANA");
         narudzba.setSifra("ORD-" + System.currentTimeMillis());
+
+        PreuzimanjeVreciceService.Termin termin = rezultatTermina.termin();
+        if (termin != null) {
+            narudzba.setPreuzimanjeOd(termin.od());
+            narudzba.setPreuzimanjeDo(termin.doVrijeme());
+            // Ako je termin već počeo, kupac to vidi odmah u potvrdi narudžbe, pa se posebno obavještenje ne šalje
+            narudzba.setObavijestPreuzimanjaPoslana(termin.jeAktivan(sada));
+        }
 
         NarudzbaEntity sacuvana = narudzbaRepository.save(narudzba);
 
@@ -202,6 +234,8 @@ public class NarudzbaController {
             dto.setAdresaDostave(n.getAdresaDostave());
             dto.setStatus(n.getStatus());
             dto.setUkupnaCijena(n.getUkupnaCijena());
+            dto.setPreuzimanjeOd(n.getPreuzimanjeOd());
+            dto.setPreuzimanjeDo(n.getPreuzimanjeDo());
 
             List<StavkaNarudzbeEntity> stavkeEnt = n.getStavke() != null ? n.getStavke() : List.of();
             dto.setStavke(stavkeEnt.stream().map(s -> {

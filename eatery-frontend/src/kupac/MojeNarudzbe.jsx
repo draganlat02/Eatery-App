@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { statusTerminaNarudzbe, formatTerminNarudzbe } from './radnoVrijeme';
 import './MojeNarudzbe.css';
 
 const NARUDZBI_PO_STRANICI = 5;
@@ -154,6 +155,10 @@ const MojeNarudzbe = ({ kupacId }) => {
                 const isVecOcjenjeno = ocjenjeneNarudzbe.includes(n.id);
                 const isOtvoreno = activeOrderId === n.id;
 
+                // Termin preuzimanja vrećice iznenađenja
+                const statusTermina = statusTerminaNarudzbe(n.preuzimanjeOd, n.preuzimanjeDo);
+                const cekaPreuzimanje = !isZavrseno && statusInfo.className !== 'rejected';
+
                 return (
                     <article className="customer-order-card" key={n.id}>
                         <div className="customer-order-top">
@@ -182,6 +187,18 @@ const MojeNarudzbe = ({ kupacId }) => {
                                 <li className="customer-order-items-empty">Nema stavki narudžbe</li>
                             )}
                         </ul>
+
+                        {statusTermina && (
+                            <div className={`customer-order-pickup ${cekaPreuzimanje ? statusTermina : ''}`}>
+                                <span>🕒 Preuzimanje {formatTerminNarudzbe(n.preuzimanjeOd, n.preuzimanjeDo)}</span>
+                                {cekaPreuzimanje && statusTermina === 'sada' && (
+                                    <strong>Možete doći po vrećicu sada!</strong>
+                                )}
+                                {cekaPreuzimanje && statusTermina === 'uskoro' && (
+                                    <em>Obavijestićemo vas kad možete doći.</em>
+                                )}
+                            </div>
+                        )}
 
                         <div className="customer-order-footer">
                             <div>

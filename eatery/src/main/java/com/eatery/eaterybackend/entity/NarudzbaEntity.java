@@ -74,6 +74,15 @@ public class NarudzbaEntity {
     @Column(name = "pin", length = 4)
     private String pin;
 
+    @Column(name = "preuzimanje_od")
+    private LocalDateTime preuzimanjeOd;
+
+    @Column(name = "preuzimanje_do")
+    private LocalDateTime preuzimanjeDo;
+
+    @Column(name = "obavijest_preuzimanja_poslana")
+    private Boolean obavijestPreuzimanjaPoslana = false;
+
     @PrePersist
     protected void onCreate() {
 

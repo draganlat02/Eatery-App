@@ -2812,3 +2812,17 @@
     cursor: not-allowed !important;
 }
 }
+
+.bag-pickup {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--primary-light, #e7f5f3);
+    color: var(--primary-dark, #115e59);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.order-info-pickup {
+    grid-column: 1 / -1;
+}

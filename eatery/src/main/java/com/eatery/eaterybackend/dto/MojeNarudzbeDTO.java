@@ -19,6 +19,9 @@ public class MojeNarudzbeDTO {
 
     private String pin;
 
+    private LocalDateTime preuzimanjeOd;
+    private LocalDateTime preuzimanjeDo;
+
     @Data
     public static class StavkaPregledDTO {
         private String nazivJela;
