@@ -3712,12 +3712,12 @@ main > .restaurant-section + .restaurant-section {
 
 .menu-management-grid {
     display: grid;
-    grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.85fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 24px;
 }
 
-.menu-editor-column { display: flex; min-width: 0; flex-direction: column; gap: 20px; }
+.menu-editor-column { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
 .management-card, .existing-menu-card {
     min-width: 0;
     padding: 24px;
@@ -3785,7 +3785,7 @@ main > .restaurant-section + .restaurant-section {
 .menu-grouped { display: flex; flex-direction: column; gap: 25px; }
 .eatery-kategorija-grupa { min-width: 0; }
 .eatery-kategorija-naslov { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #61716e; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-.menu-items-grid { display: flex; flex-direction: column; gap: 10px; }
+.menu-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; }
 .menu-item-card { display: grid; grid-template-columns: 50px minmax(0, 1fr); align-items: center; gap: 16px; min-width: 0; padding: 15px 17px; border: 1px solid #e7ecea; border-radius: 15px; background: #ffffff; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .menu-item-card:hover { border-color: #d6e3e0; box-shadow: 0 4px 14px rgba(23, 32, 31, 0.035); }
 .menu-item-card.is-editing { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
@@ -3811,7 +3811,8 @@ main > .restaurant-section + .restaurant-section {
     .menu-page-header h2 { font-size: 31px; }
     .menu-page-header p { max-width: 250px; font-size: 12px; }
     .menu-management-grid { gap: 16px; }
-    .menu-editor-column { display: flex; gap: 16px; }
+    .menu-editor-column { display: flex; flex-direction: column; gap: 16px; }
+    .menu-items-grid { grid-template-columns: minmax(0, 1fr); }
     .management-card, .existing-menu-card { padding: 18px; border-radius: 16px; }
     .menu-item-card { grid-template-columns: 42px minmax(0, 1fr); gap: 12px; padding: 12px; }
     .menu-item-image { width: 42px; height: 42px; border-radius: 11px; }
