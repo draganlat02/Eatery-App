@@ -217,6 +217,7 @@ public class KupacService {
                 MojeNarudzbeDTO.StavkaPregledDTO sd = new MojeNarudzbeDTO.StavkaPregledDTO();
                 sd.setKolicina(s.getKolicina());
                 sd.setCijena(s.getCijena());
+                sd.setOriginalnaCijena(s.getOriginalnaCijena());
                 sd.setNazivJela(stavkaNazivResolver.naziv(s, katalog));
                 sd.setTipStavke(s.getTipStavke());
                 return sd;

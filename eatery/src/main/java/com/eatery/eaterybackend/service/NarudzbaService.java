@@ -1,5 +1,6 @@
 package com.eatery.eaterybackend.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,12 +15,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.eatery.eaterybackend.dto.NarudzbaDTO;
+import com.eatery.eaterybackend.entity.JeloEntity;
 import com.eatery.eaterybackend.entity.KlijentEntity;
 import com.eatery.eaterybackend.entity.KorisnikEntity;
 import com.eatery.eaterybackend.entity.NarudzbaEntity;
 import com.eatery.eaterybackend.entity.StavkaNarudzbeEntity;
 import com.eatery.eaterybackend.entity.VrecicaIznenadjenjaEntity;
 import com.eatery.eaterybackend.exception.ApiException;
+import com.eatery.eaterybackend.repository.JeloRepository;
 import com.eatery.eaterybackend.repository.KlijentRepository;
 import com.eatery.eaterybackend.repository.KorisnikRepository;
 import com.eatery.eaterybackend.repository.NarudzbaRepository;
@@ -33,6 +36,7 @@ public class NarudzbaService {
     private final KorisnikRepository korisnikRepository;
     private final StavkaNarudzbeRepository stavkaNarudzbeRepository;
     private final VrecicaIznenadjenjaRepository vrecicaIznenadjenjaRepository;
+    private final JeloRepository jeloRepository;
     private final KlijentRepository klijentRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final StavkaNazivResolver stavkaNazivResolver;
@@ -44,6 +48,7 @@ public class NarudzbaService {
                            KorisnikRepository korisnikRepository,
                            StavkaNarudzbeRepository stavkaNarudzbeRepository,
                            VrecicaIznenadjenjaRepository vrecicaIznenadjenjaRepository,
+                           JeloRepository jeloRepository,
                            KlijentRepository klijentRepository,
                            SimpMessagingTemplate messagingTemplate,
                            StavkaNazivResolver stavkaNazivResolver,
@@ -54,6 +59,7 @@ public class NarudzbaService {
         this.korisnikRepository = korisnikRepository;
         this.stavkaNarudzbeRepository = stavkaNarudzbeRepository;
         this.vrecicaIznenadjenjaRepository = vrecicaIznenadjenjaRepository;
+        this.jeloRepository = jeloRepository;
         this.klijentRepository = klijentRepository;
         this.messagingTemplate = messagingTemplate;
         this.stavkaNazivResolver = stavkaNazivResolver;
@@ -131,6 +137,9 @@ public class NarudzbaService {
 
         if (dto.getStavke() != null && !dto.getStavke().isEmpty()) {
             for (NarudzbaDTO.StavkaDTO sDTO : dto.getStavke()) {
+                BigDecimal placena = sDTO.getCijena() != null ? sDTO.getCijena() : BigDecimal.ZERO;
+                BigDecimal originalna = sDTO.getOriginalnaCijena();
+
                 if ("VRECICA".equalsIgnoreCase(sDTO.getTipStavke())) {
                     VrecicaIznenadjenjaEntity vrecica = vrecicaIznenadjenjaRepository.findById(sDTO.getJeloId())
                             .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Vrećica nije pronađena"));
@@ -139,6 +148,27 @@ public class NarudzbaService {
                     }
                     vrecica.setKolicina(vrecica.getKolicina() - sDTO.getKolicina());
                     vrecicaIznenadjenjaRepository.save(vrecica);
+
+                    if (originalna == null) {
+                        originalna = vrecica.getOriginalnaCijena();
+                    }
+                    if (placena == null || placena.signum() == 0) {
+                        placena = vrecica.getAkcijskaCijena();
+                    }
+                } else {
+                    if (originalna == null && sDTO.getJeloId() != null) {
+                        JeloEntity jelo = jeloRepository.findById(sDTO.getJeloId()).orElse(null);
+                        if (jelo != null) {
+                            originalna = jelo.getCijena();
+                            if (placena == null || placena.signum() == 0) {
+                                placena = jelo.getEfektivnaCijena();
+                            }
+                        }
+                    }
+                }
+
+                if (originalna == null) {
+                    originalna = placena;
                 }
 
                 StavkaNarudzbeEntity stavka = new StavkaNarudzbeEntity();
@@ -146,7 +176,8 @@ public class NarudzbaService {
                 stavka.setIdJela(sDTO.getJeloId());
                 stavka.setTipStavke(sDTO.getTipStavke());
                 stavka.setKolicina(sDTO.getKolicina());
-                stavka.setCijena(sDTO.getCijena());
+                stavka.setCijena(placena);
+                stavka.setOriginalnaCijena(originalna);
                 stavka.setNaziv(stavkaNazivResolver.nazivZaNovuStavku(sDTO.getTipStavke(), sDTO.getJeloId(), null));
                 stavkaNarudzbeRepository.save(stavka);
             }
@@ -208,6 +239,7 @@ public class NarudzbaService {
                 sd.setTipStavke(s.getTipStavke());
                 sd.setKolicina(s.getKolicina());
                 sd.setCijena(s.getCijena());
+                sd.setOriginalnaCijena(s.getOriginalnaCijena());
                 sd.setNaziv(stavkaNazivResolver.naziv(s, katalog));
                 return sd;
             }).toList());

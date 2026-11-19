@@ -19,8 +19,8 @@ public class NarudzbaDTO {
     private String status;
     private String adresaDostave;
     private BigDecimal ukupnaCijena;
-    private String pin; // samo za preuzimanje vrećice iznenađenja
-    private LocalDateTime preuzimanjeOd; // termin preuzimanja vrećice (null ako nema vrećice)
+    private String pin;
+    private LocalDateTime preuzimanjeOd;
     private LocalDateTime preuzimanjeDo;
     private List<StavkaDTO> stavke;
 
@@ -29,9 +29,10 @@ public class NarudzbaDTO {
     @AllArgsConstructor
     public static class StavkaDTO {
         private Long jeloId;
-        private String tipStavke; // "JELO" ili "VRECICA"
+        private String tipStavke;
         private String naziv;
         private Integer kolicina;
         private BigDecimal cijena;
+        private BigDecimal originalnaCijena;
     }
 }

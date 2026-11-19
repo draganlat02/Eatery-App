@@ -19,7 +19,6 @@ public class StavkaNarudzbeEntity {
     @Column(name = "id_narudzbe")
     private Long idNarudzbe;
 
-    // ➕ DODAJTE OVO: Prosto polje za ID jela
     @Column(name = "id_jela")
     private Long idJela;
 
@@ -29,8 +28,16 @@ public class StavkaNarudzbeEntity {
     @Column(name = "kolicina")
     private Integer kolicina;
 
+    /** Plaćena (efektivna) cijena po komadu u trenutku narudžbe. */
     @Column(name = "cijena")
     private BigDecimal cijena;
+
+    /**
+     * Originalna cijena po komadu prije popusta (snapshot u trenutku narudžbe).
+     * Koristi se za prikaz uštede i za polje „Ukupna ušteda“ na profilu kupca.
+     */
+    @Column(name = "originalna_cijena")
+    private BigDecimal originalnaCijena;
 
     @Column(name = "tip_stavke")
     private String tipStavke;
