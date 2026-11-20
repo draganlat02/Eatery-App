@@ -934,7 +934,6 @@ const RestoranPanel = ({ restoranId, user, onLogout }) => {
             <div>
               <div className="restoran-brand-name">Eatery</div>
 
-              <div className="restoran-brand-subtitle">KLIJENT PANEL</div>
             </div>
           </button>
 

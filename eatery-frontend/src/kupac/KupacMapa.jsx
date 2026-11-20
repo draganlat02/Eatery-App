@@ -440,7 +440,7 @@ const KupacMapa = ({
                                                         ? `${numericRating.toFixed(1)}${brojOcjena > 0 ? ` (${brojOcjena})` : ''}`
                                                         : 'Nema ocjena'}
                                                 </span>
-                                                <span className="ocjena-dugme-link">Recenzije</span>
+                                                <span className="ocjena-dugme-link"></span>
                                             </button>
 
                                             <p className="map-card-meta">

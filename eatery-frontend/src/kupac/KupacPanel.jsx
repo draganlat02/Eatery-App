@@ -612,7 +612,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
           </span>
           <span className="brand-text">
             <span className="brand-name">Eatery</span>
-            <span className="brand-subtitle">Kupac panel</span>
           </span>
         </button>
 
@@ -675,7 +674,6 @@ function KupacPanel({ user, onLogout, onUserUpdate }) {
               </span>
               <span className="sidebar-user-text">
                 <strong>{user.ime || user.korisnickoIme || "Kupac"}</strong>
-                <span>Kupac</span>
               </span>
             </div>
           )}
