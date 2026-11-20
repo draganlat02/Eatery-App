@@ -397,6 +397,7 @@
 }
 
 
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
@@ -423,7 +424,6 @@
         font-size: 19px;
     }
 
-    /* Horizontalni scroll na mobilnom da sekcija ne zauzme cijeli ekran */
     .surprise-grid {
         display: flex;
         gap: 12px;
@@ -443,3 +443,178 @@
         scroll-snap-align: start;
     }
 }
+
+/* =========================================================
+   RESTORAN + PIN LOKACIJE
+   ========================================================= */
+
+.surprise-restaurant-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 3px;
+}
+
+.surprise-restaurant-row .surprise-small-label {
+    margin: 0;
+    min-width: 0;
+    flex: 1;
+}
+
+.surprise-map-pin {
+    all: unset;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: #fff3dc;
+    color: #d97706;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.surprise-map-pin:hover {
+    background: #ffe5b0;
+    color: #b45309;
+    transform: scale(1.08);
+}
+
+.surprise-map-pin:active {
+    transform: scale(0.94);
+}
+
+.surprise-map-pin svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 2;
+}
+
+/* =========================================================
+   MODAL LOKACIJE
+   ========================================================= */
+
+.surprise-map-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+    background: rgba(20, 30, 27, 0.55);
+    backdrop-filter: blur(5px);
+
+    animation: surpriseOverlayIn 0.2s ease;
+}
+
+.surprise-map-modal {
+    width: min(520px, 100%);
+    overflow: hidden;
+
+    border: 1px solid #eee8dc;
+    border-radius: 18px;
+    background: #fff;
+
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.22);
+
+    animation: surpriseModalIn 0.22s ease;
+}
+
+.surprise-map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+}
+
+.surprise-map-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    color: #d97706;
+}
+
+.surprise-map-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.surprise-map-heading strong {
+    color: #202a27;
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.surprise-map-heading span {
+    color: #77817e;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.surprise-map-close {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 9px;
+    background: #f4f5f3;
+    color: #64706c;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.surprise-map-close:hover {
+    background: #e9ece9;
+}
+
+.surprise-map {
+    display: block;
+    width: 100%;
+    height: 330px;
+}
+
+@keyframes surpriseOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes surpriseModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 600px) {
+    .surprise-map-overlay {
+        padding: 14px;
+    }
+
+    .surprise-map {
+        height: 280px;
+    }
+}
+

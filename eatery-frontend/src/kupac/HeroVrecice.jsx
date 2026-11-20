@@ -10,11 +10,13 @@ import {
 import API from "../api";
 import { statusPreuzimanjaVrecice } from "./radnoVrijeme";
 import "./HeroVrecice.css";
+import { MapPin, X } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 
 function HeroVrecice({ onDodajUVrecicu, lokacija, lokacijaUcitana }) {
   const [vrecice, setVrecice] = useState([]);
   const [loading, setLoading] = useState(true);
-
+const [otvorenaLokacija, setOtvorenaLokacija] = useState(null);
   // Učitavanje aktivnih Vrećica uz sortiranje po udaljenosti kupca
   useEffect(() => {
     // Sačekaj da se završi provjera lokacije kupca
@@ -130,7 +132,28 @@ function HeroVrecice({ onDodajUVrecicu, lokacija, lokacijaUcitana }) {
             const nedostupno = isRasprodano || preuzimanjeIsteklo;
             const nazivRestorana =
               v.restoran?.nazivObjekta || v.restoran?.naziv;
+const restoran = v.restoran;
 
+const lat = Number(
+  restoran?.latitude ??
+  restoran?.lat ??
+  restoran?.lokacija?.latitude ??
+  restoran?.lokacija?.lat
+);
+
+const lng = Number(
+  restoran?.longitude ??
+  restoran?.lng ??
+  restoran?.lon ??
+  restoran?.lokacija?.longitude ??
+  restoran?.lokacija?.lng
+);
+
+const imaLokaciju =
+  Number.isFinite(lat) &&
+  Number.isFinite(lng) &&
+  lat !== 0 &&
+  lng !== 0;
             return (
               <article
                 className={
@@ -153,11 +176,32 @@ function HeroVrecice({ onDodajUVrecicu, lokacija, lokacijaUcitana }) {
                 </div>
 
                 <div className="surprise-card-content">
-                  {nazivRestorana && (
-                    <span className="surprise-small-label">
-                      {nazivRestorana}
-                    </span>
-                  )}
+                 {nazivRestorana && (
+  <div className="surprise-restaurant-row">
+    <span className="surprise-small-label">
+      {nazivRestorana}
+    </span>
+
+    {imaLokaciju && (
+      <button
+        type="button"
+        className="surprise-map-pin"
+        onClick={() =>
+          setOtvorenaLokacija({
+            naziv: nazivRestorana,
+            adresa: restoran?.adresa || "",
+            lat,
+            lng,
+          })
+        }
+        title="Pogledaj lokaciju restorana"
+        aria-label="Pogledaj lokaciju restorana"
+      >
+        <MapPin size={16} />
+      </button>
+    )}
+  </div>
+)}
                   <h3>{v.naziv}</h3>
 
                   <p className="surprise-description">
@@ -235,9 +279,76 @@ function HeroVrecice({ onDodajUVrecicu, lokacija, lokacijaUcitana }) {
             );
           })}
         </div>
+          )}
+
+      {/* MODAL ZA LOKACIJU RESTORANA */}
+      {otvorenaLokacija && (
+        <div
+          className="surprise-map-overlay"
+          onClick={() => setOtvorenaLokacija(null)}
+        >
+          <div
+            className="surprise-map-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="surprise-map-header">
+              <div className="surprise-map-heading">
+                <MapPin size={19} />
+
+                <div>
+                  <strong>{otvorenaLokacija.naziv}</strong>
+                  <span>
+                    {otvorenaLokacija.adresa || "Lokacija restorana"}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="surprise-map-close"
+                onClick={() => setOtvorenaLokacija(null)}
+                aria-label="Zatvori mapu"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <MapContainer
+              key={`${otvorenaLokacija.lat}-${otvorenaLokacija.lng}`}
+              center={[
+                otvorenaLokacija.lat,
+                otvorenaLokacija.lng,
+              ]}
+              zoom={16}
+              scrollWheelZoom
+              className="surprise-map"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+
+              <Marker
+                position={[
+                  otvorenaLokacija.lat,
+                  otvorenaLokacija.lng,
+                ]}
+              >
+                <Popup>
+                  <strong>{otvorenaLokacija.naziv}</strong>
+                  <br />
+                  {otvorenaLokacija.adresa}
+                </Popup>
+              </Marker>
+            </MapContainer>
+          </div>
+        </div>
       )}
+
     </section>
   );
 }
+  
+
 
 export default HeroVrecice;
